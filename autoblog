@@ -10,12 +10,16 @@ rssfile="rss.xml"
 template="template.html"
 [ -z $EDITOR ] && EDITOR="vim"
 
+[ ! -d $blogdir ] &&
+    read -erp "Blog directory doesn't exist. Initialize it here (y/n)? " initdir &&
+    [ "$initdir" = "y" ] && mkdir -pv $blogdir
+
 listposts()
 {
-    printf "Blog posts (Total: %d)\n" "$(ls $1 -I "*final*" | wc -l)"
+    printf "Listing posts in %s (Total: %d)\n" "$1" "$(ls $1 -I "*final*" | wc -l)"
     ls -rc $1 -I "*-final*" | awk -F '/' '{print $NF}' | nl
     read -erp "Choose a post to by number: " num
-    blogpost=$(ls -rc $draftdir -I "*-final*" | nl | grep -w " $num" | awk '{print $2}' | sed "s/\..*//")
+    blogpost=$(ls -rc $1 -I "*-final*" | nl | grep -w " $num" | awk '{print $2}' | sed "s/\..*//")
 }
 
 newpost()
@@ -29,32 +33,36 @@ newpost()
 
 publish()
 {
-    title=$(cat $draftdir/$blogpost-final.html | grep "<title>" | sed "s/<title>//;s/<\/title>//;s/ *//;")
+    title=$(grep "<title>" $draftdir/$blogpost-final.html | sed "s/<title>//;s/<\/title>//;s/ *//;")
     sed -i "/<!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost-final.html
     sed "s/</\&lt;/g;s/>/\&gt;/g;" "$draftdir/$blogpost.html" > $draftdir/$blogpost.xml
     cp $draftdir/$blogpost-final.html $blogdir && rename $blogpost-final.html $blogpost.html $blogdir/$blogpost-final.html
     printf "\t\t\t\t<li>%s &ndash; <a href=\"%s\">%s</a></li>\n" "$(date '+%Y %b %d')" "$blogdir/$blogpost.html" "$title" > $draftdir/$blogpost-htmlentry
     printf "<item>\n\t<title>%s</title>\n\t<guid>%s</guid>\n\t<pubDate>%s</pubDate>\n\t<description>\n\t\t%s\n\t</description>\n</item>\n" "$title" "$website/$blogdir/$blogpost.html" "$(date '+%a, %d %b %Y')" "$(cat $draftdir/$blogpost.xml)" > $draftdir/$blogpost-rssentry
 
-    #sed -i 40d $index # don't hardcode so much
+    #sed -i 40d $index # don't hardcode it
     sed -i "/<!--BLOG $(date '+%B %Y')-->/r $draftdir/$blogpost-htmlentry" $blogindex && echo "Blogindex... done."
     sed -i "/<!--BLOG-->/r $draftdir/$blogpost-htmlentry" $index && echo "Index... done"
     sed -i "/<!--BLOG-->/r $draftdir/$blogpost-rssentry" $rssfile && echo "RSS... done"
-    rm -f $draftdir/$blogpost*
-    echo "Published $blogpost"
+    rm -f $draftdir/$blogpost* && echo "Cleaning up .drafts... done"
+    echo "Published $blogpost."
 }
 
 delete()
 {
-    rm $draftdir/$blogpost.html
+    [ $(echo "$blogpost" | wc -l) -gt 1 ] && echo "Invalid choice" && exit
+    [ "$1" = "$blogdir" ] && sed -i "/$blogpost/d" $index $blogindex
+    # TODO add RSS removal
+    rm $1/$blogpost.html && echo "Removed $blogdir."
 }
 
 case $1 in
     n*) newpost ;;
     p*) listposts $draftdir && publish ;;
     e*) listposts $draftdir && $EDITOR $draftdir/$blogpost.html ;;
-    r*) listposts $draftdir && revise ;;
-    d*) listposts $draftdir && delete ;;
+    r*) listposts $blogdir  && $EDITOR $blogdir/$blogpost.html ;;
+    t*) listposts $draftdir && delete $draftdir ;;
+    d*) listposts $blogdir  && delete $blogdir ;;
     l*) listposts $blogdir ;;
-    *) printf "Usage: autoblog [OPTION]\n\nOptions:\n  -n\t\tNew post\n  -p\t\tPublish post\n  -e\t\tEdit draft post\n  -r\t\tRevise already published post\n  -d\t\tDelete draft post\n  -l\t\tList all draft posts\n"
+    *) printf "Usage: autoblog [OPTION]\n\nOptions:\n  -n\t\tNew post\n  -p\t\tPublish draft post\n  -e\t\tEdit draft post\n  -r\t\tRevise published post\n  -t\t\tDelete draft post\n  -d\t\tDelete published post\n  -l\t\tList all published posts\n" ;;
 esac

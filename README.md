@@ -58,7 +58,8 @@ Options:
   -n        New post
   -p        Publish draft post
   -e        Edit draft post
-  -r        Revise already published post
-  -d        Delete draft post
+  -r        Revise published post
+  -t        Delete draft post
+  -d        Delete published post
   -l        List all published posts
 ```
