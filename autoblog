@@ -51,9 +51,10 @@ publish()
 delete()
 {
     [ $(echo "$blogpost" | wc -l) -gt 1 ] && echo "Invalid choice" && exit
-    [ "$1" = "$blogdir" ] && sed -i "/$blogpost/d" $index $blogindex
-    # TODO add RSS removal
-    rm $1/$blogpost.html && echo "Removed $blogdir."
+    [ "$1" = "$blogdir" ] &&
+        sed -i "/$blogpost/d" $index $blogindex &&
+        sed -ni "/<item>/{ :loop; N; s/<\\/item>/&/; T loop; s/$blogpost/&/; T keep; d }; :keep; p" $rssfile
+    rm $1/$blogpost.html && echo "Removed $blogpost."
 }
 
 case $1 in
