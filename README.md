@@ -17,7 +17,8 @@ with a few modifications to match my own workflow.
 ## Installation 
 
 Run the `Makefile` in order to install the script. It'll
-be installed in `usr/local/bin/`
+be installed in `usr/local/bin/`. You can change the install path
+by editing the `INSTALL_PATH` variable in the `Makefile`.
 
 ```shell
 $ cd path/to/autoblog/
@@ -53,7 +54,7 @@ fields must exist and be left as is.
 You can run the script with one of the following
 options
 
-```shell
+```
 Options:
   -n        New post
   -p        Publish draft post
