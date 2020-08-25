@@ -54,16 +54,26 @@ delete()
     [ "$1" = "$blogdir" ] &&
         sed -i "/$blogpost/d" $index $blogindex &&
         sed -ni "/<item>/{ :loop; N; s/<\\/item>/&/; T loop; s/$blogpost/&/; T keep; d }; :keep; p" $rssfile
-    rm $1/$blogpost.html && echo "Removed $blogpost."
+    rm -f $1/$blogpost* && echo "Removed $blogpost."
+}
+
+view()
+{
+    cat $draftdir/$blogpost-final.html > $draftdir/$blogpost-final-view.html
+    title=$(grep "<title>" $draftdir/$blogpost-final-view.html | sed "s/<title>//;s/<\/title>//;s/ *//;")
+    sed -i "/<!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost-final-view.html
+    $BROWSER $draftdir/$blogpost-final-view.html
 }
 
 case $1 in
-    n*) newpost ;;
-    p*) listposts $draftdir && publish ;;
-    e*) listposts $draftdir && $EDITOR $draftdir/$blogpost.html ;;
-    r*) listposts $blogdir  && $EDITOR $blogdir/$blogpost.html ;;
-    t*) listposts $draftdir && delete $draftdir ;;
-    d*) listposts $blogdir  && delete $blogdir ;;
-    l*) listposts $blogdir ;;
-    *) printf "Usage: autoblog [OPTION]\n\nOptions:\n  -n\t\tNew post\n  -p\t\tPublish draft post\n  -e\t\tEdit draft post\n  -r\t\tRevise published post\n  -t\t\tDelete draft post\n  -d\t\tDelete published post\n  -l\t\tList all published posts\n" ;;
+    -n*) newpost ;;
+    -p*) listposts $draftdir && publish ;;
+    -e*) listposts $draftdir && $EDITOR $draftdir/$blogpost.html ;;
+    -v*) listposts $draftdir && view ;;
+    -t*) listposts $draftdir && delete $draftdir ;;
+    -r*) listposts $blogdir  && $EDITOR $blogdir/$blogpost.html ;;
+    -o*) listposts $blogdir  && $BROWSER $blogdir/$blogpost.html ;;
+    -d*) listposts $blogdir  && delete $blogdir ;;
+    -l*) listposts $blogdir ;;
+    *)   printf "Usage: autoblog [OPTION]\n\nOptions:\n  -n\t\tNew post\n  -p\t\tPublish draft post\n  -e\t\tEdit draft post\n  -v\t\tView draft post in browser\n  -t\t\tDelete draft post\n  -r\t\tRevise published post\n  -o\t\tView published post in browser\n  -d\t\tDelete published post\n  -l\t\tList all published posts\n" ;;
 esac

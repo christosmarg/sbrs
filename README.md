@@ -58,8 +58,10 @@ Options:
   -n        New post
   -p        Publish draft post
   -e        Edit draft post
-  -r        Revise published post
+  -v        View draft post in browser
   -t        Delete draft post
+  -r        Revise published post
+  -o        View published post in browser
   -d        Delete published post
   -l        List all published posts
 ```
