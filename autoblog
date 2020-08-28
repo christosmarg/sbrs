@@ -8,11 +8,11 @@ blogindex="blogindex.html"
 index="index.html"
 rssfile="rss.xml"
 template="template.html"
-[ -z $EDITOR ] && EDITOR="vim"
+[ -z $EDITOR ] && EDITOR="nano"
 
 [ ! -d $blogdir ] &&
-    read -erp "Blog directory doesn't exist. Initialize it here (y/n)? " initdir &&
-    [ "$initdir" = "y" ] && mkdir -pv $blogdir
+    read -erp "Blog directory doesn't exist. Initialize it here (y/n)? " initblogdir &&
+    [ "$initblogdir" = "y" ] && mkdir -pv $blogdir
 
 listposts()
 {
@@ -42,7 +42,7 @@ publish()
 
     sed -i "/<\!--BLOG $(date '+%B %Y')-->/r $draftdir/$blogpost-htmlentry" $blogindex && echo "Blogindex... done."
     sed -i "/<\!--BLOG-->/r $draftdir/$blogpost-htmlentry" $index && echo "Index... done"
-    sed -i "/<\!--BLOG-->/r $draftdir/$blogpost-rssentry" $rssfile
+    sed -i "/<\!--BLOG-->/r $draftdir/$blogpost-rssentry" $rssfile && echo "RSS... done"
     remove_last_index_entry && echo "Removing last entry from index file... done"
     remove_contents $draftdir && echo "Cleaning up .drafts... done"
     echo "Published $blogpost."
@@ -50,7 +50,7 @@ publish()
 
 delete()
 {
-    [ $(echo "$blogpost" | wc -l) -gt 1 ] && echo "Invalid choice" && exit
+    [ $(($(echo "$blogpost" | wc -l))) -gt 1 ] && echo "Invalid choice" && exit
     [ "$1" = "$blogdir" ] &&
         sed -i "/$blogpost/d" $index $blogindex &&
         sed -ni "/<item>/{ :loop; N; s/<\\/item>/&/; T loop; s/$blogpost/&/; T keep; d }; :keep; p" $rssfile
@@ -72,8 +72,8 @@ remove_contents()
 
 remove_last_index_entry()
 {
-    indexentries=$(sed "1,/<\!--BLOG-->/d" $index | grep "<li>")
-    [ $(($(echo "$indexentries" | wc -l))) -gt 7 ] && 
+    indexentries=$(sed "1,/<\!--BLOG-->/d" $index | grep "<li>") &&
+        [ $(($(echo "$indexentries" | wc -l))) -gt 7 ] && 
         lastentry=$(echo "$indexentries" | tail -2 | head -1) &&
         sed -i "s|$lastentry||;" $index
 }
