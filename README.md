@@ -8,10 +8,10 @@ with a few modifications to match my own workflow.
 
 `autoblog` can do the following:
 
+* Define a `blog` directory where all blog posts will be stored
 * Set up a seperate `HTML` blog page with CSS styling
 * Add the blog post on the website's main page and on the blog's index
 * Add the blog post to an RSS feed
-* List all the published posts
 * Revise or delete an already published post
 
 ## Installation 

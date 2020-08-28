@@ -18,14 +18,14 @@ listposts()
 {
     printf "Listing posts in %s (Total: %d)\n" "$1" "$(ls $1 -I "*final*" | wc -l)"
     ls -rc $1 -I "*-final*" | awk -F '/' '{print $NF}' | nl
-    read -erp "Choose a post to by number: " num
+    read -erp "Choose a post to by number: " num && [ -z $num ] && echo "No post selected." && exit
     blogpost=$(ls -rc $1 -I "*-final*" | nl | grep -w " $num" | awk '{print $2}' | sed "s/\..*//")
 }
 
 newpost()
 {
     mkdir -p $draftdir
-    read -erp "Title: " title
+    read -erp "Title: " title && [ -z $title ] && echo "Please specify a title." && exit
     blogpost=$(echo $title | iconv -cf UTF-8 -t ASCII//TRANSLIT | tr -d '[:punct:]' | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
     $EDITOR "$draftdir/$blogpost.html"
     sed "s/TITLE/$title/g;s/HEADER/$title/g;s/AUTHOR/$author/g;" $template > $draftdir/$blogpost-final.html
@@ -34,17 +34,17 @@ newpost()
 publish()
 {
     title=$(grep "<title>" $draftdir/$blogpost-final.html | sed "s/<title>//;s/<\/title>//;s/ *//;")
-    sed -i "/<!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost-final.html
+    sed -i "/<\!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost-final.html
     sed "s/</\&lt;/g;s/>/\&gt;/g;" "$draftdir/$blogpost.html" > $draftdir/$blogpost.xml
     cp $draftdir/$blogpost-final.html $blogdir && rename $blogpost-final.html $blogpost.html $blogdir/$blogpost-final.html
-    printf "\t\t\t\t<li>%s &ndash; <a href=\"%s\">%s</a></li>\n" "$(date '+%Y %b %d')" "$blogdir/$blogpost.html" "$title" > $draftdir/$blogpost-htmlentry
-    printf "<item>\n\t<title>%s</title>\n\t<guid>%s</guid>\n\t<pubDate>%s</pubDate>\n\t<description>\n\t\t%s\n\t</description>\n</item>\n" "$title" "$website/$blogdir/$blogpost.html" "$(date '+%a, %d %b %Y')" "$(cat $draftdir/$blogpost.xml)" > $draftdir/$blogpost-rssentry
+    printf "\t\t\t\t<li>%s &ndash; <a href=\"%s\">%s</a></li>\n" "$(date '+%Y %b %d')" "$blogdir/$blogpost.html" "$title" | expand -t4 > $draftdir/$blogpost-htmlentry
+    printf "<item>\n\t<title>%s</title>\n\t<guid>%s</guid>\n\t<pubDate>%s</pubDate>\n\t<description>\n\t\t%s\n\t</description>\n</item>\n" "$title" "$website/$blogdir/$blogpost.html" "$(date '+%a, %d %b %Y')" "$(cat $draftdir/$blogpost.xml)" | expand -t4 > $draftdir/$blogpost-rssentry
 
-    #sed -i 40d $index # don't hardcode it
-    sed -i "/<!--BLOG $(date '+%B %Y')-->/r $draftdir/$blogpost-htmlentry" $blogindex && echo "Blogindex... done."
-    sed -i "/<!--BLOG-->/r $draftdir/$blogpost-htmlentry" $index && echo "Index... done"
-    sed -i "/<!--BLOG-->/r $draftdir/$blogpost-rssentry" $rssfile && echo "RSS... done"
-    rm -f $draftdir/$blogpost* && echo "Cleaning up .drafts... done"
+    sed -i "/<\!--BLOG $(date '+%B %Y')-->/r $draftdir/$blogpost-htmlentry" $blogindex && echo "Blogindex... done."
+    sed -i "/<\!--BLOG-->/r $draftdir/$blogpost-htmlentry" $index && echo "Index... done"
+    sed -i "/<\!--BLOG-->/r $draftdir/$blogpost-rssentry" $rssfile
+    remove_last_index_entry && echo "Removing last entry from index file... done"
+    remove_contents $draftdir && echo "Cleaning up .drafts... done"
     echo "Published $blogpost."
 }
 
@@ -54,15 +54,28 @@ delete()
     [ "$1" = "$blogdir" ] &&
         sed -i "/$blogpost/d" $index $blogindex &&
         sed -ni "/<item>/{ :loop; N; s/<\\/item>/&/; T loop; s/$blogpost/&/; T keep; d }; :keep; p" $rssfile
-    rm -f $1/$blogpost* && echo "Removed $blogpost."
+    remove_contents $1 && echo "Removed $blogpost."
 }
 
 view()
 {
     cat $draftdir/$blogpost-final.html > $draftdir/$blogpost-final-view.html
     title=$(grep "<title>" $draftdir/$blogpost-final-view.html | sed "s/<title>//;s/<\/title>//;s/ *//;")
-    sed -i "/<!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost-final-view.html
+    sed -i "/<\!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost-final-view.html
     $BROWSER $draftdir/$blogpost-final-view.html
+}
+
+remove_contents()
+{
+    ls $1 | grep -w $blogpost | sed "s/^/$1\//" | xargs rm
+}
+
+remove_last_index_entry()
+{
+    indexentries=$(sed "1,/<\!--BLOG-->/d" $index | grep "<li>")
+    [ $(($(echo "$indexentries" | wc -l))) -gt 7 ] && 
+        lastentry=$(echo "$indexentries" | tail -2 | head -1) &&
+        sed -i "s|$lastentry||;" $index
 }
 
 case $1 in
