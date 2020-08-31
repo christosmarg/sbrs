@@ -1,6 +1,6 @@
 #!/bin/sh
 
-website="https://christosmarg.github.io"
+website="https://christosmarg.xyz"
 author="Christos Margiolis"
 blogdir="blog"
 draftdir=".drafts"
