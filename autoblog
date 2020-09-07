@@ -26,7 +26,6 @@ newpost()
 {
     mkdir -p $draftdir
     read -erp "Title: " title && [ -z "$title" ] && echo "Please specify a title." && exit
-    #read -erp "Description: " description && [ -z "$description" ] && echo "Please specify a small description." && exit
     blogpost=$(echo $title | iconv -cf UTF-8 -t ASCII//TRANSLIT | tr -d '[:punct:]' | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
     [ -f "$blogdir/$blogpost.html" ] && echo "File exists already." && exit
     $EDITOR "$draftdir/$blogpost.html"
