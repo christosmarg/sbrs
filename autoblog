@@ -8,9 +8,9 @@ blogindex="blogindex.html"
 index="index.html"
 rssfile="rss.xml"
 template="template.html"
-[ -z $EDITOR ] && EDITOR="nano"
+[ -z "$EDITOR" ] && EDITOR="nano"
 
-[ ! -d $blogdir ] &&
+[ ! -d "$blogdir" ] &&
     read -erp "Blog directory doesn't exist. Initialize it here (y/n)? " initblogdir &&
     [ "$initblogdir" = "y" ] && mkdir -pv $blogdir
 
@@ -18,15 +18,17 @@ listposts()
 {
     printf "Listing posts in %s (Total: %d)\n" "$1" "$(ls $1 -I "*final*" | wc -l)"
     ls -rc $1 -I "*-final*" | awk -F '/' '{print $NF}' | nl
-    read -erp "Choose a post to by number: " num && [ -z $num ] && echo "No post selected." && exit
+    read -erp "Choose a post to by number: " num && [ -z "$num" ] && echo "No post selected." && exit
     blogpost=$(ls -rc $1 -I "*-final*" | nl | grep -w " $num" | awk '{print $2}' | sed "s/\..*//")
 }
 
 newpost()
 {
     mkdir -p $draftdir
-    read -erp "Title: " title && [ -z $title ] && echo "Please specify a title." && exit
+    read -erp "Title: " title && [ -z "$title" ] && echo "Please specify a title." && exit
+    #read -erp "Description: " description && [ -z "$description" ] && echo "Please specify a small description." && exit
     blogpost=$(echo $title | iconv -cf UTF-8 -t ASCII//TRANSLIT | tr -d '[:punct:]' | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+    [ -f "$blogdir/$blogpost.html" ] && echo "File exists already." && exit
     $EDITOR "$draftdir/$blogpost.html"
     sed "s/TITLE/$title/g;s/HEADER/$title/g;s/AUTHOR/$author/g;" $template > $draftdir/$blogpost-final.html
 }
