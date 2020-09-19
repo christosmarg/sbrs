@@ -37,7 +37,7 @@ publish()
     title=$(grep "<title>" $draftdir/$blogpost-final.html | sed "s/<title>//;s/<\/title>//;s/ *//;")
     sed -i "/<\!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost-final.html
     sed "s/</\&lt;/g;s/>/\&gt;/g;" "$draftdir/$blogpost.html" > $draftdir/$blogpost.xml
-    cp $draftdir/$blogpost-final.html $blogdir && rename $blogpost-final.html $blogpost.html $blogdir/$blogpost-final.html
+    cp $draftdir/$blogpost-final.html $blogdir && mv $blogdir/$blogpost-final.html $blogdir/$blogpost.html
     printf "\t\t\t\t<li>%s &ndash; <a href=\"%s\">%s</a></li>\n" "$(date '+%Y %b %d')" "$blogdir/$blogpost.html" "$title" | expand -t4 > $draftdir/$blogpost-htmlentry
     printf "<item>\n\t<title>%s</title>\n\t<guid>%s</guid>\n\t<pubDate>%s</pubDate>\n\t<description>\n\t\t%s\n\t</description>\n</item>\n" "$title" "$website/$blogdir/$blogpost.html" "$(date '+%a, %d %b %Y')" "$(cat $draftdir/$blogpost.xml)" | expand -t4 > $draftdir/$blogpost-rssentry
 
