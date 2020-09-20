@@ -1,0 +1,91 @@
+.Dd September 20, 2020
+.Dt AUTOBLOG 1
+.Os
+.Sh NAME
+.Nm autoblog
+.Nd automatic blog and RSS system
+.Sh SYNOPSIS
+.Nm
+.Op Fl n Ar new post
+.Op Fl p Ar publish draft
+.Op Fl e Ar edit draft
+.Op Fl v Ar view draft
+.Op Fl t Ar delete draft
+.Op Fl r Ar revise published
+.Op Fl o Ar view published
+.Op Fl d Ar delete published
+.Op Fl l Ar list all published
+.Sh DESCRIPTION
+.Nm
+generates a blog post page and RSS feed.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl n Ar new post
+Prompt the user to write a new blog post in HTML
+.It Fl p Ar publish draft
+Publish one of the posts stored in the
+.Ar .drafts
+directory. 
+.It Fl e Ar edit draft
+Edit one of the posts stored in the
+.Ar .drafts
+directory.
+.It Fl v Ar view draft
+View one of the posts stored in the
+.Ar .drafts
+directory.
+.It Fl t Ar delete draft
+Delete one of the posts stored in the
+.Ar .drafts
+directory.
+.It Fl r Ar revise published
+Revise a published post stored in the
+.Ar blog
+directory.
+.It Fl o Ar view published
+View a published post stored in the
+.Ar blog
+directory on your default browser.
+.It Fl d Ar delete published
+Delete a published post stored in the
+.Ar blog
+directory.
+.It Fl l Ar list all published
+List all posts stored in the
+.Ar blog
+directory.
+.El
+.Pp
+Only one option at a time can be used.
+.Pp
+Run the script inside your website's main directory and edit the
+.Ar website
+and
+.Ar author
+to match your own information. Make sure that the rest of the variables
+are properly set to match your website's structure. By default, all
+blog posts are stored in
+.Ar blog/
+.Pp
+.Nm autoblog
+will search for <!--BLOG--> inside
+.Ar index.html
+and
+.Ar rss.xml
+in order to put the blog post listings and RSS feed respectively. Inside
+.Ar blogindex.html
+however, it will search for <!--BLOG [Month Year]--> (e.g <!--BLOG January 1800->).
+.Pp
+A
+.Ar template.html
+file needs to exist in your main directory in order for the script to run properly.
+That file is how you want your blog post's generated page to look like. The
+.Ar TITLE
+,
+.Ar HEADER
+and
+.Ar AUTHOR
+fields must exist and be left as is.
+.Sh AUTHORS
+.An Christos Margiolis Aq Mt christos@christosmarg.xyz
