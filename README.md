@@ -18,7 +18,7 @@ with a few modifications to match my own workflow.
 
 Run the `Makefile` in order to install the script. It'll
 be installed in `usr/local/bin/`. You can change the install path
-by editing the `INSTALL_PATH` variable in the `Makefile`.
+by editing the `BIN_DIR` variable in the `Makefile`.
 
 ```shell
 $ cd path/to/autoblog/
@@ -41,7 +41,7 @@ structure. By default, all blog posts are stored in `blog/`.
 `autoblog` will search for `<!--BLOG-->` inside `index.html` and
 `rss.xml` in order to put the blog post listings and RSS feed
 respectively. Inside `blogindex.html` however, it will search for
-`<!--BLOG [Month Year]-->` (e.g `<!--January 1800-->`).  
+`<!--BLOG [Month Year]-->` (e.g `<!-- BLOG January 1800-->`).  
 
 A `template.html` file needs to exist in your main directory
 in order for the script to run properly.
