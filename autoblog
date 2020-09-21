@@ -10,15 +10,22 @@ rssfile="rss.xml"
 template="template.html"
 [ -z "$EDITOR" ] && EDITOR="nano"
 
-[ ! -d "$blogdir" ] &&
-    read -erp "Blog directory doesn't exist. Initialize it here (y/n)? " initblogdir &&
-    [ "$initblogdir" = "y" ] && mkdir -pv $blogdir
+confirm_action()
+{
+    read -erp "$1" confirm && [ "$confirm" = "$2" ] || exit
+}
 
 listposts()
 {
     printf "Listing posts in %s (Total: %d)\n" "$1" "$(ls $1 -I "*final*" | wc -l)"
     ls -rc $1 -I "*-final*" | awk -F '/' '{print $NF}' | nl
-    read -erp "Choose a post to by number: " num && [ -z "$num" ] && echo "No post selected." && exit
+    [ $(($(ls $1 | wc -l))) -eq 0 ] && echo "No posts available in $1" && exit
+    read -erp "Choose a post to by number: " num &&
+        [ -z "$(echo $num | grep -E "^[1-9]+$")" ] || 
+        [ $(($(echo "$blogpost" | wc -l))) -gt 1 ] ||
+        [ $(($num)) -gt $(($(ls $1 | wc -l))) ] ||
+        [ -z "$num" ] && 
+        echo "No post selected." && exit
     blogpost=$(ls -rc $1 -I "*-final*" | nl | grep -w " $num" | awk '{print $2}' | sed "s/\..*//")
 }
 
@@ -29,11 +36,13 @@ newpost()
     blogpost=$(echo $title | iconv -cf UTF-8 -t ASCII//TRANSLIT | tr -d '[:punct:]' | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
     [ -f "$blogdir/$blogpost.html" ] && echo "File exists already." && exit
     $EDITOR "$draftdir/$blogpost.html"
+    sed -i "s/^/\ \ \ \ \ \ \ \ /" $draftdir/$blogpost.html # bad?
     sed "s/TITLE/$title/g;s/HEADER/$title/g;s/AUTHOR/$author/g;" $template > $draftdir/$blogpost-final.html
 }
 
 publish()
 {
+    confirm_action "Publish post (y/N)? " "y"
     title=$(grep "<title>" $draftdir/$blogpost-final.html | sed "s/<title>//;s/<\/title>//;s/ *//;")
     sed -i "/<\!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost-final.html
     sed "s/</\&lt;/g;s/>/\&gt;/g;" "$draftdir/$blogpost.html" > $draftdir/$blogpost.xml
@@ -52,6 +61,7 @@ publish()
 delete()
 {
     [ $(($(echo "$blogpost" | wc -l))) -gt 1 ] && echo "Invalid choice" && exit
+    confirm_action "Are you sure you want to delete \"$blogpost\" (y/N)? " "y"
     [ "$1" = "$blogdir" ] &&
         sed -i "/$blogpost/d" $index $blogindex &&
         sed -ni "/<item>/{ :loop; N; s/<\\/item>/&/; T loop; s/$blogpost/&/; T keep; d }; :keep; p" $rssfile
@@ -78,6 +88,10 @@ remove_last_index_entry()
         lastentry=$(echo "$indexentries" | tail -2 | head -1) &&
         sed -i "s|$lastentry||;" $index
 }
+
+[ ! -d "$blogdir" ] &&
+    confirm_action "Blog directory doesn't exist. Intialize it here (y/n)? " "y" &&
+    mkdir -pv $blogdir
 
 case $1 in
     -n*) newpost ;;
