@@ -50,6 +50,9 @@ publish()
     printf "\t\t\t\t<li>%s &ndash; <a href=\"%s\">%s</a></li>\n" "$(date '+%Y %b %d')" "$blogdir/$blogpost.html" "$title" | expand -t4 > $draftdir/$blogpost-htmlentry
     printf "<item>\n\t<title>%s</title>\n\t<guid>%s</guid>\n\t<pubDate>%s</pubDate>\n\t<description>\n\t\t%s\n\t</description>\n</item>\n" "$title" "$website/$blogdir/$blogpost.html" "$(date '+%a, %d %b %Y')" "$(cat $draftdir/$blogpost.xml)" | expand -t4 > $draftdir/$blogpost-rssentry
 
+    #dateid=$(date '+%b %Y' | sed 's/\ //' | tr '[:upper:]' '[:lower:]')
+    #[ -z "$(grep "$dateid" $blogindex)" ] && update_blogindex
+
     sed -i "/<\!--BLOG $(date '+%B %Y')-->/r $draftdir/$blogpost-htmlentry" $blogindex && echo "Blogindex... done."
     sed -i "/<\!--BLOG-->/r $draftdir/$blogpost-htmlentry" $index && echo "Index... done"
     sed -i "/<\!--BLOG-->/r $draftdir/$blogpost-rssentry" $rssfile && echo "RSS... done"
@@ -76,6 +79,15 @@ view()
     $BROWSER $draftdir/$blogpost-final-view.html
 }
 
+# TEST
+update_blogindex()
+{
+    #dateid=$(date '+%b %Y' | sed 's/\ //' | tr '[:upper:]' '[:lower:]')
+    datename=$(date '+%B %Y')
+    monthheader=$(echo -e "<h2 id=\"$dateid\">$datename<\/h2>\n<ul>\n\t<\!--BLOG $datename-->\n<\/ul>" | sed 's/^/\t\t\t/' | expand -t4)
+    sed "/<\!--BLOG-->/a $monthheader" $blogindex
+}
+
 remove_contents()
 {
     ls $1 | grep -w $blogpost | sed "s/^/$1\//" | xargs rm
@@ -100,8 +112,9 @@ case $1 in
     -v*) listposts $draftdir && view ;;
     -t*) listposts $draftdir && delete $draftdir ;;
     -r*) listposts $blogdir  && $EDITOR $blogdir/$blogpost.html ;;
+    -c*) listposts $blogdir  && exit ;;
     -o*) listposts $blogdir  && $BROWSER $blogdir/$blogpost.html ;;
     -d*) listposts $blogdir  && delete $blogdir ;;
     -l*) listposts $blogdir ;;
-    *)   printf "Usage: autoblog [OPTION]\n\nOptions:\n  -n\t\tNew post\n  -p\t\tPublish draft post\n  -e\t\tEdit draft post\n  -v\t\tView draft post in browser\n  -t\t\tDelete draft post\n  -r\t\tRevise published post\n  -o\t\tView published post in browser\n  -d\t\tDelete published post\n  -l\t\tList all published posts\n" ;;
+    *)   printf "Usage: autoblog [OPTION]\n\nOptions:\n  -n\t\tNew post\n  -p\t\tPublish draft post\n  -e\t\tEdit draft post\n  -v\t\tView draft post in browser\n  -t\t\tDelete draft post\n  -r\t\tRevise published post\n  -c\t\tChange title\n  -o\t\tView published post in browser\n  -d\t\tDelete published post\n  -l\t\tList all published posts\n" ;;
 esac

@@ -62,6 +62,7 @@ Options:
   -v        View draft post in browser
   -t        Delete draft post
   -r        Revise published post
+  -c        Change title
   -o        View published post in browser
   -d        Delete published post
   -l        List all published posts
