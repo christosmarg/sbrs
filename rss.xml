@@ -7,14 +7,6 @@
 <link>https://yourwebsite.com/rss.xml</link>
 
 <!--BLOG-->
-<item>
-    <title>Sample post</title>
-    <guid>https://yourwebsite.com/sample-post.html</guid>
-    <pubDate>Wed, 11 Aug 1900</pubDate>
-    <description>
-        &lt;p&gt;Sample post.&lt;/p&gt;
-    </description>
-</item>
 
 </channel>
 </rss>

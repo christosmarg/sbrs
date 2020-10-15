@@ -2,17 +2,19 @@
 
 A small and simple blog and RSS shell script inspired by
 [Luke Smith's lb](https://github.com/LukeSmithxyz/lb) but
-with a few modifications to match my own workflow.
+with many modifications and additions to match my own workflow.
 
 ## Features
 
 `autoblog` can do the following:
 
-* Define a `blog` directory where all blog posts will be stored
-* Set up a seperate `HTML` blog page with CSS styling
-* Add the blog post on the website's main page and on the blog's index
-* Add the blog post to an RSS feed
-* Revise or delete an already published post
+* Define a `blog` directory where all blog posts will be stored.
+* Set up a seperate `HTML` blog page with CSS styling of your choosing.
+* Add the blog post on the website's main and blog index pages.
+* Add the blog post to a specified RSS feed.
+* Revise, delete, or change the title of a published post.
+
+Read the `man` page for more.
 
 ## Installation 
 
@@ -25,7 +27,7 @@ $ cd path/to/autoblog/
 $ sudo make install
 ```
 
-You must **always** run the script inside the website's
+You must **always** run the script inside your website's
 main directory.  
 
 Alternatively, you can store the script inside your website's
@@ -33,19 +35,23 @@ main directory.
 
 ## Preparation
 
-Inside the script, change the `website` and `author` variables
+The following files have to exist
+* `index.html`
+* `blogindex.html`
+* `rss.xml`
+* `template.html`
+* `styles.css`
+
+Inside the `autoblog` script, change the `website` and `author` variables
 to your website's URL and your name and make sure the rest
 of the variables are properly set to match your website's
 structure. By default, all blog posts are stored in `blog/`.  
 
-`autoblog` will search for `<!--BLOG-->` inside `index.html` and
-`rss.xml` in order to put the blog post listings and RSS feed
-respectively. Inside `blogindex.html` however, it will search for
-`<!--BLOG [Month Year]-->` (e.g `<!-- BLOG January 1800-->`).  
+`autoblog` will search for `<!--BLOG-->` inside `index.html`,
+`blogindex.html` and `rss.xml` in order to put the blog post
+listings and RSS feed below it.
 
-A `template.html` file needs to exist in your main directory
-in order for the script to run properly.
-That file is how you want your blog post's page to look like. See
+The `template.html` file is how you want your blog post's page to look like. See
 my own `template.html` for more. The `TITLE`, `HEADER` and `AUTHOR`
 fields must exist and be left as is.
 

@@ -1,4 +1,5 @@
 #!/bin/sh
+# See LICENSE file for copyright and license details.
 
 website="https://christosmarg.xyz"
 author="Christos Margiolis"
@@ -10,111 +11,153 @@ rssfile="rss.xml"
 template="template.html"
 [ -z "$EDITOR" ] && EDITOR="nano"
 
-confirm_action()
-{
-    read -erp "$1" confirm && [ "$confirm" = "$2" ] || exit
+confirm_action() {
+        read -erp "$1" confirm && [ "$confirm" = "$2" ] || exit
 }
 
-listposts()
-{
-    printf "Listing posts in %s (Total: %d)\n" "$1" "$(ls $1 -I "*final*" | wc -l)"
-    ls -rc $1 -I "*-final*" | awk -F '/' '{print $NF}' | nl
-    [ $(($(ls $1 | wc -l))) -eq 0 ] && echo "No posts available in $1" && exit
-    read -erp "Choose a post to by number: " num &&
-        [ -z "$(echo $num | grep -E "^[1-9]+$")" ] || 
-        [ $(($(echo "$blogpost" | wc -l))) -gt 1 ] ||
-        [ $(($num)) -gt $(($(ls $1 | wc -l))) ] ||
-        [ -z "$num" ] && 
-        echo "No post selected." && exit
-    blogpost=$(ls -rc $1 -I "*-final*" | nl | grep -w " $num" | awk '{print $2}' | sed "s/\..*//")
+listposts() {
+        printf "Listing posts in %s (total: %d)\n" "$1" "$(ls $1 -I "*final*" | wc -l)"
+        ls -rc $1 -I "*-final*" | awk -F '/' '{print $NF}' | nl
+        [ $(($(ls $1 | wc -l))) -eq 0 ] && echo "No posts available in $1" && exit
+        read -erp "Choose a post to by number: " num       \
+            && [ -z "$(echo $num | grep -E "^[1-9]+$")" ]  \
+            || [ $(($(echo "$blogpost" | wc -l))) -gt 1 ]  \
+            || [ $(($num)) -gt $(($(ls $1 | wc -l))) ]     \
+            || [ -z "$num" ]                               \
+            && echo "No post selected." && exit
+        blogpost=$(ls -rc $1 -I "*-final*" | nl | grep -w " $num" | awk '{print $2}' | sed "s/\..*//")
 }
 
-newpost()
-{
-    mkdir -p $draftdir
-    read -erp "Title: " title && [ -z "$title" ] && echo "Please specify a title." && exit
-    blogpost=$(echo $title | iconv -cf UTF-8 -t ASCII//TRANSLIT | tr -d '[:punct:]' | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
-    [ -f "$blogdir/$blogpost.html" ] && echo "File exists already." && exit
-    $EDITOR "$draftdir/$blogpost.html"
-    sed -i "s/^/\ \ \ \ \ \ \ \ /" $draftdir/$blogpost.html # bad?
-    sed "s/TITLE/$title/g;s/HEADER/$title/g;s/AUTHOR/$author/g;" $template > $draftdir/$blogpost-final.html
+newpost() {
+        mkdir -p $draftdir
+        read -erp "Title: " title && [ -z "$title" ] && echo "Please specify a title." && exit
+        blogpost=$(echo $title | iconv -cf UTF-8 -t ASCII//TRANSLIT | tr -d '[:punct:]' | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+        [ -f "$blogdir/$blogpost.html" ] && echo "File exists already." && exit
+        $EDITOR "$draftdir/$blogpost.html"
+        sed -i "s/^/\ \ \ \ \ \ \ \ /" $draftdir/$blogpost.html # bad?
+        sed "s/TITLE/$title/g;s/HEADER/$title/g;s/AUTHOR/$author/g;" $template > $draftdir/$blogpost-final.html
 }
 
-publish()
-{
-    confirm_action "Publish post (y/N)? " "y"
-    title=$(grep "<title>" $draftdir/$blogpost-final.html | sed "s/<title>//;s/<\/title>//;s/ *//;")
-    sed -i "/<\!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost-final.html
-    sed "s/</\&lt;/g;s/>/\&gt;/g;" "$draftdir/$blogpost.html" > $draftdir/$blogpost.xml
-    cp $draftdir/$blogpost-final.html $blogdir && mv $blogdir/$blogpost-final.html $blogdir/$blogpost.html
-    printf "\t\t\t\t<li>%s &ndash; <a href=\"%s\">%s</a></li>\n" "$(date '+%Y %b %d')" "$blogdir/$blogpost.html" "$title" | expand -t4 > $draftdir/$blogpost-htmlentry
-    printf "<item>\n\t<title>%s</title>\n\t<guid>%s</guid>\n\t<pubDate>%s</pubDate>\n\t<description>\n\t\t%s\n\t</description>\n</item>\n" "$title" "$website/$blogdir/$blogpost.html" "$(date '+%a, %d %b %Y')" "$(cat $draftdir/$blogpost.xml)" | expand -t4 > $draftdir/$blogpost-rssentry
+publish() {
+        confirm_action "Publish post (y/N)? " "y"
+        title=$(grep "<title>" $draftdir/$blogpost-final.html | sed "s/<title>//;s/<\/title>//;s/ *//;")
+        sed -i "/<\!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost-final.html
+        sed "s/</\&lt;/g;s/>/\&gt;/g;" "$draftdir/$blogpost.html" > $draftdir/$blogpost.xml
+        cp $draftdir/$blogpost-final.html $blogdir && mv $blogdir/$blogpost-final.html $blogdir/$blogpost.html
 
-    #dateid=$(date '+%b %Y' | sed 's/\ //' | tr '[:upper:]' '[:lower:]')
-    #[ -z "$(grep "$dateid" $blogindex)" ] && update_blogindex
+        printf "\t\t\t\t<li>%s &ndash; <a href=\"%s\">%s</a></li>\n" "$(date '+%Y %b %d')" "$blogdir/$blogpost.html" "$title" | expand -t4 > $draftdir/$blogpost-htmlentry
+        printf "<item>\n\t<title>%s</title>\n\t<guid>%s</guid>\n\t<pubDate>%s</pubDate>\n\t<description>\n\t\t%s\n \t</description>\n</item>\n" "$title" "$website/$blogdir/$blogpost.html" "$(date '+%a, %d %b %Y')" "$(cat $draftdir/$blogpost.xml)" | expand -t4 > $draftdir/$blogpost-rssentry
 
-    sed -i "/<\!--BLOG $(date '+%B %Y')-->/r $draftdir/$blogpost-htmlentry" $blogindex && echo "Blogindex... done."
-    sed -i "/<\!--BLOG-->/r $draftdir/$blogpost-htmlentry" $index && echo "Index... done"
-    sed -i "/<\!--BLOG-->/r $draftdir/$blogpost-rssentry" $rssfile && echo "RSS... done"
-    remove_last_index_entry && echo "Removing last entry from index file... done"
-    remove_contents $draftdir && echo "Cleaning up .drafts... done"
-    echo "Published $blogpost."
+        blogindex_update
+        sed -i "/<\!--BLOG $(date '+%B %Y')-->/r $draftdir/$blogpost-htmlentry" $blogindex && echo "Blogindex... done."
+        sed -i "/<\!--BLOG-->/r $draftdir/$blogpost-htmlentry" $index && echo "Index... done"
+        sed -i "/<\!--BLOG-->/r $draftdir/$blogpost-rssentry" $rssfile && echo "RSS... done"
+        remove_last_index_entry && echo "Removing last entry from index file... done"
+        remove_contents $draftdir && echo "Cleaning up .drafts... done"
+        echo "Published $blogpost."
 }
 
-delete()
-{
-    [ $(($(echo "$blogpost" | wc -l))) -gt 1 ] && echo "Invalid choice" && exit
-    confirm_action "Are you sure you want to delete \"$blogpost\" (y/N)? " "y"
-    [ "$1" = "$blogdir" ] &&
-        sed -i "/$blogpost/d" $index $blogindex &&
-        sed -ni "/<item>/{ :loop; N; s/<\\/item>/&/; T loop; s/$blogpost/&/; T keep; d }; :keep; p" $rssfile
-    remove_contents $1 && echo "Removed $blogpost."
+# i dont like how this looks...
+blogindex_update() {
+        dateid=$(date '+%b %Y' | sed 's/\ //' | tr '[:upper:]' '[:lower:]')
+        if [ -z "$(grep "$dateid" $blogindex)" ]; then
+                datename=$(date '+%B %Y')
+                monthheader=$(printf "\\
+<h2 id=\"%s\">%s<\/h2> \\
+<ul> \\
+\t<\!--BLOG %s--> \\
+<\/ul>" \
+                    "$dateid" "$datename" "$datename" | sed 's/^/\t\t\t/' | expand -t4)
+
+                sed -i "/<\!--BLOG-->/a $monthheader" $blogindex
+        fi
 }
 
-view()
-{
-    cat $draftdir/$blogpost-final.html > $draftdir/$blogpost-final-view.html
-    title=$(grep "<title>" $draftdir/$blogpost-final-view.html | sed "s/<title>//;s/<\/title>//;s/ *//;")
-    sed -i "/<\!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost-final-view.html
-    $BROWSER $draftdir/$blogpost-final-view.html
+delete() {
+        [ $(($(echo "$blogpost" | wc -l))) -gt 1 ] && echo "Invalid choice" && exit
+        confirm_action "Are you sure you want to delete \"$blogpost\" (y/N)? " "y"
+        [ "$1" = "$blogdir" ] &&
+            sed -i "/$blogpost/d" $index $blogindex &&
+            sed -ni "/<item>/{ :loop; N; s/<\\/item>/&/; T loop; s/$blogpost/&/; T keep; d }; :keep; p" $rssfile
+        remove_contents $1 && echo "Removed $blogpost."
 }
 
-# TEST
-update_blogindex()
-{
-    #dateid=$(date '+%b %Y' | sed 's/\ //' | tr '[:upper:]' '[:lower:]')
-    datename=$(date '+%B %Y')
-    monthheader=$(echo -e "<h2 id=\"$dateid\">$datename<\/h2>\n<ul>\n\t<\!--BLOG $datename-->\n<\/ul>" | sed 's/^/\t\t\t/' | expand -t4)
-    sed "/<\!--BLOG-->/a $monthheader" $blogindex
+view() {
+        cat $draftdir/$blogpost-final.html > $draftdir/$blogpost-final-view.html
+        title=$(grep "<title>" $draftdir/$blogpost-final-view.html | sed "s/<title>//;s/<\/title>//;s/ *//;")
+        sed -i "/<\!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost-final-view.html
+        $BROWSER $draftdir/$blogpost-final-view.html
 }
 
-remove_contents()
-{
-    ls $1 | grep -w $blogpost | sed "s/^/$1\//" | xargs rm
+title_change() {
+        read -erp "Give post a new title: " newtitle && confirm_action "Are you sure (y/N)? " "y"
+        oldtitle=$(grep "<title>" $blogdir/$blogpost.html | sed "s/<title>//;s/<\/title>//;s/ *//;")
+        newtitle_fmt=$(echo $newtitle | iconv -cf UTF-8 -t ASCII//TRANSLIT | tr -d '[:punct:]' | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+        sed -i "s/$blogpost/$newtitle_fmt/g;s/$oldtitle/$newtitle/g" $blogdir/$blogpost.html $index $blogindex $rssfile &&
+            mv $blogdir/$blogpost.html $blogdir/$newtitle_fmt.html &&
+            echo "Title changed successfully: $oldtitle -> $newtitle"
 }
 
-remove_last_index_entry()
-{
-    indexentries=$(sed "1,/<\!--BLOG-->/d" $index | grep "<li>") &&
-        [ $(($(echo "$indexentries" | wc -l))) -gt 7 ] && 
-        lastentry=$(echo "$indexentries" | tail -2 | head -1) &&
-        sed -i "s|$lastentry||;" $index
+remove_contents() {
+        ls $1 | grep -w $blogpost | sed "s/^/$1\//" | xargs rm
 }
 
-[ ! -d "$blogdir" ] &&
-    confirm_action "Blog directory doesn't exist. Intialize it here (y/n)? " "y" &&
-    mkdir -pv $blogdir
+remove_last_index_entry() {
+        indexentries=$(sed "1,/<\!--BLOG-->/d" $index | grep "<li>") &&
+            [ $(($(echo "$indexentries" | wc -l))) -gt 7 ] && 
+            lastentry=$(echo "$indexentries" | tail -2 | head -1) &&
+            sed -i "s|$lastentry||;" $index
+}
 
-case $1 in
-    -n*) newpost ;;
-    -p*) listposts $draftdir && publish ;;
-    -e*) listposts $draftdir && $EDITOR $draftdir/$blogpost.html ;;
-    -v*) listposts $draftdir && view ;;
-    -t*) listposts $draftdir && delete $draftdir ;;
-    -r*) listposts $blogdir  && $EDITOR $blogdir/$blogpost.html ;;
-    -c*) listposts $blogdir  && exit ;;
-    -o*) listposts $blogdir  && $BROWSER $blogdir/$blogpost.html ;;
-    -d*) listposts $blogdir  && delete $blogdir ;;
-    -l*) listposts $blogdir ;;
-    *)   printf "Usage: autoblog [OPTION]\n\nOptions:\n  -n\t\tNew post\n  -p\t\tPublish draft post\n  -e\t\tEdit draft post\n  -v\t\tView draft post in browser\n  -t\t\tDelete draft post\n  -r\t\tRevise published post\n  -c\t\tChange title\n  -o\t\tView published post in browser\n  -d\t\tDelete published post\n  -l\t\tList all published posts\n" ;;
-esac
+err() {
+        echo "$1 file is missing. . ."
+        missing=true
+}
+
+missing_check() {
+        missing=false
+        [ -f "$template" ]  || err $template
+        [ -f "$index" ]     || err $index
+        [ -f "$rssfile" ]   || err $rssfile
+        [ -f "$blogindex" ] || err $blogindex
+        [ "$missing" = "true" ] && exit
+
+        [ ! -d "$blogdir" ] &&
+            confirm_action "Blog directory doesn't exist. Intialize it here (y/n)? " "y" &&
+            mkdir -pv $blogdir
+}
+
+usage() {
+        printf "Usage: autoblog [OPTION]\n\n"
+        printf "Options:\n"
+        printf "  -n\t\tNew post\n"
+        printf "  -p\t\tPublish draft post\n"
+        printf "  -e\t\tEdit draft post\n"
+        printf "  -v\t\tView draft post in browser\n"
+        printf "  -t\t\tDelete draft post\n"
+        printf "  -r\t\tRevise published post\n"
+        printf "  -c\t\tChange title\n"
+        printf "  -o\t\tView published post in browser\n"
+        printf "  -d\t\tDelete published post\n"
+        printf "  -l\t\tList all published posts\n"
+}
+
+# Script begins here
+main() {
+        missing_check
+        case $1 in
+            -n*) newpost ;;
+            -p*) listposts $draftdir && publish ;;
+            -e*) listposts $draftdir && $EDITOR $draftdir/$blogpost.html ;;
+            -v*) listposts $draftdir && view ;;
+            -t*) listposts $draftdir && delete $draftdir ;;
+            -r*) listposts $blogdir  && $EDITOR $blogdir/$blogpost.html ;;
+            -c*) listposts $blogdir  && title_change ;;
+            -o*) listposts $blogdir  && $BROWSER $blogdir/$blogpost.html ;;
+            -d*) listposts $blogdir  && delete $blogdir ;;
+            -l*) listposts $blogdir ;;
+            *)   usage ;;
+        esac
+}
+
+main "$1"
