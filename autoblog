@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/usr/local/bin/bash
+# make POSIX
 # See LICENSE file for copyright and license details.
 
 website="https://christosmarg.xyz"
@@ -9,23 +10,23 @@ blogindex="blogindex.html"
 index="index.html"
 rssfile="rss.xml"
 template="template.html"
-[ -z "$EDITOR" ] && EDITOR="nano"
+[ -z "$EDITOR" ] && EDITOR="vi"
 
 confirm_action() {
         read -erp "$1" confirm && [ "$confirm" = "$2" ] || exit
 }
 
 listposts() {
-        printf "Listing posts in %s (total: %d)\n" "$1" "$(ls $1 -I "*final*" | wc -l)"
-        ls -rc $1 -I "*-final*" | awk -F '/' '{print $NF}' | nl
-        [ $(($(ls $1 | wc -l))) -eq 0 ] && echo "No posts available in $1" && exit
+        printf "Listing posts in %s (total: %d)\n" "$1" "$(gnuls $1 -I "*final*" | wc -l)"
+        gnuls -rc $1 -I "*-final*" | awk -F '/' '{print $NF}' | nl
+        [ $(($(gnuls $1 | wc -l))) -eq 0 ] && echo "No posts available in $1" && exit
         read -erp "Choose a post to by number: " num       \
             && [ -z "$(echo $num | grep -E "^[1-9]+$")" ]  \
             || [ $(($(echo "$blogpost" | wc -l))) -gt 1 ]  \
-            || [ $(($num)) -gt $(($(ls $1 | wc -l))) ]     \
+            || [ $(($num)) -gt $(($(gnuls $1 | wc -l))) ]     \
             || [ -z "$num" ]                               \
             && echo "No post selected." && exit
-        blogpost=$(ls -rc $1 -I "*-final*" | nl | grep -w " $num" | awk '{print $2}' | sed "s/\..*//")
+        blogpost=$(gnuls -rc $1 -I "*-final*" | nl | grep -w " $num" | awk '{print $2}' | gsed "s/\..*//")
 }
 
 newpost() {
@@ -34,24 +35,24 @@ newpost() {
         blogpost=$(echo $title | iconv -cf UTF-8 -t ASCII//TRANSLIT | tr -d '[:punct:]' | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
         [ -f "$blogdir/$blogpost.html" ] && echo "File exists already." && exit
         $EDITOR "$draftdir/$blogpost.html"
-        sed -i "s/^/\ \ \ \ \ \ \ \ /" $draftdir/$blogpost.html # bad?
-        sed "s/TITLE/$title/g;s/HEADER/$title/g;s/AUTHOR/$author/g;" $template > $draftdir/$blogpost-final.html
+        gsed -i "s/^/\ \ \ \ \ \ \ \ /" $draftdir/$blogpost.html # bad?
+        gsed "s/TITLE/$title/g;s/HEADER/$title/g;s/AUTHOR/$author/g;" $template > $draftdir/$blogpost-final.html
 }
 
 publish() {
         confirm_action "Publish post (y/N)? " "y"
-        title=$(grep "<title>" $draftdir/$blogpost-final.html | sed "s/<title>//;s/<\/title>//;s/ *//;")
-        sed -i "/<\!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost-final.html
-        sed "s/</\&lt;/g;s/>/\&gt;/g;" "$draftdir/$blogpost.html" > $draftdir/$blogpost.xml
+        title=$(grep "<title>" $draftdir/$blogpost-final.html | gsed "s/<title>//;s/<\/title>//;s/ *//;")
+        gsed -i "/<\!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost-final.html
+        gsed "s/</\&lt;/g;s/>/\&gt;/g;" "$draftdir/$blogpost.html" > $draftdir/$blogpost.xml
         cp $draftdir/$blogpost-final.html $blogdir && mv $blogdir/$blogpost-final.html $blogdir/$blogpost.html
 
         printf "\t\t\t\t<li>%s &ndash; <a href=\"%s\">%s</a></li>\n" "$(date '+%Y %b %d')" "$blogdir/$blogpost.html" "$title" | expand -t4 > $draftdir/$blogpost-htmlentry
         printf "<item>\n\t<title>%s</title>\n\t<guid>%s</guid>\n\t<pubDate>%s</pubDate>\n\t<description>\n\t\t%s\n \t</description>\n</item>\n" "$title" "$website/$blogdir/$blogpost.html" "$(date '+%a, %d %b %Y')" "$(cat $draftdir/$blogpost.xml)" | expand -t4 > $draftdir/$blogpost-rssentry
 
         blogindex_update
-        sed -i "/<\!--BLOG $(date '+%B %Y')-->/r $draftdir/$blogpost-htmlentry" $blogindex && echo "Blogindex... done."
-        sed -i "/<\!--BLOG-->/r $draftdir/$blogpost-htmlentry" $index && echo "Index... done"
-        sed -i "/<\!--BLOG-->/r $draftdir/$blogpost-rssentry" $rssfile && echo "RSS... done"
+        gsed -i "/<\!--BLOG $(date '+%B %Y')-->/r $draftdir/$blogpost-htmlentry" $blogindex && echo "Blogindex... done."
+        gsed -i "/<\!--BLOG-->/r $draftdir/$blogpost-htmlentry" $index && echo "Index... done"
+        gsed -i "/<\!--BLOG-->/r $draftdir/$blogpost-rssentry" $rssfile && echo "RSS... done"
         remove_last_index_entry && echo "Removing last entry from index file... done"
         remove_contents $draftdir && echo "Cleaning up .drafts... done"
         echo "Published $blogpost."
@@ -59,7 +60,7 @@ publish() {
 
 # i dont like how this looks...
 blogindex_update() {
-        dateid=$(date '+%b %Y' | sed 's/\ //' | tr '[:upper:]' '[:lower:]')
+        dateid=$(date '+%b %Y' | gsed 's/\ //' | tr '[:upper:]' '[:lower:]')
         if [ -z "$(grep "$dateid" $blogindex)" ]; then
                 datename=$(date '+%B %Y')
                 monthheader=$(printf "\\
@@ -67,9 +68,9 @@ blogindex_update() {
 <ul> \\
 \t<\!--BLOG %s--> \\
 <\/ul>" \
-                    "$dateid" "$datename" "$datename" | sed 's/^/\t\t\t/' | expand -t4)
+                    "$dateid" "$datename" "$datename" | gsed 's/^/\t\t\t/' | expand -t4)
 
-                sed -i "/<\!--BLOG-->/a $monthheader" $blogindex
+                gsed -i "/<\!--BLOG-->/a $monthheader" $blogindex
         fi
 }
 
@@ -77,36 +78,36 @@ delete() {
         [ $(($(echo "$blogpost" | wc -l))) -gt 1 ] && echo "Invalid choice" && exit
         confirm_action "Are you sure you want to delete \"$blogpost\" (y/N)? " "y"
         [ "$1" = "$blogdir" ] &&
-            sed -i "/$blogpost/d" $index $blogindex &&
-            sed -ni "/<item>/{ :loop; N; s/<\\/item>/&/; T loop; s/$blogpost/&/; T keep; d }; :keep; p" $rssfile
+            gsed -i "/$blogpost/d" $index $blogindex &&
+            gsed -ni "/<item>/{ :loop; N; s/<\\/item>/&/; T loop; s/$blogpost/&/; T keep; d }; :keep; p" $rssfile
         remove_contents $1 && echo "Removed $blogpost."
 }
 
 view() {
         cat $draftdir/$blogpost-final.html > $draftdir/$blogpost-final-view.html
-        title=$(grep "<title>" $draftdir/$blogpost-final-view.html | sed "s/<title>//;s/<\/title>//;s/ *//;")
-        sed -i "/<\!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost-final-view.html
+        title=$(grep "<title>" $draftdir/$blogpost-final-view.html | gsed "s/<title>//;s/<\/title>//;s/ *//;")
+        gsed -i "/<\!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost-final-view.html
         $BROWSER $draftdir/$blogpost-final-view.html
 }
 
 title_change() {
         read -erp "Give post a new title: " newtitle && confirm_action "Are you sure (y/N)? " "y"
-        oldtitle=$(grep "<title>" $blogdir/$blogpost.html | sed "s/<title>//;s/<\/title>//;s/ *//;")
+        oldtitle=$(grep "<title>" $blogdir/$blogpost.html | gsed "s/<title>//;s/<\/title>//;s/ *//;")
         newtitle_fmt=$(echo $newtitle | iconv -cf UTF-8 -t ASCII//TRANSLIT | tr -d '[:punct:]' | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
-        sed -i "s/$blogpost/$newtitle_fmt/g;s/$oldtitle/$newtitle/g" $blogdir/$blogpost.html $index $blogindex $rssfile &&
+        gsed -i "s/$blogpost/$newtitle_fmt/g;s/$oldtitle/$newtitle/g" $blogdir/$blogpost.html $index $blogindex $rssfile &&
             mv $blogdir/$blogpost.html $blogdir/$newtitle_fmt.html &&
             echo "Title changed successfully: $oldtitle -> $newtitle"
 }
 
 remove_contents() {
-        ls $1 | grep -w $blogpost | sed "s/^/$1\//" | xargs rm
+        gnuls $1 | grep -w $blogpost | gsed "s/^/$1\//" | xargs rm
 }
 
 remove_last_index_entry() {
-        indexentries=$(sed "1,/<\!--BLOG-->/d" $index | grep "<li>") &&
+        indexentries=$(gsed "1,/<\!--BLOG-->/d" $index | grep "<li>") &&
             [ $(($(echo "$indexentries" | wc -l))) -gt 7 ] && 
             lastentry=$(echo "$indexentries" | tail -2 | head -1) &&
-            sed -i "s|$lastentry||;" $index
+            gsed -i "s|$lastentry||;" $index
 }
 
 err() {

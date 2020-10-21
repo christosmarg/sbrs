@@ -1,80 +1,75 @@
-.TH AUTOBLOG 1 autoblog\-VERSION
-.SH NAME
-autoblog \- automatic blog and RSS system
-.SH SYNOPSIS
-.B autoblog
-.RB [ \-n \ new\ post ]
-.RB [ \-p \ publish\ draft ]
-.RB [ \-e \ edit\ draft ]
-.RB [ \-v \ view\ draft ]
-.RB [ \-t \ delete\ draft ]
-.RB [ \-r \ revise\ published ]
-.RB [ \-c \ change\ title]
-.RB [ \-o \ view\ published ]
-.RB [ \-d \ delete\ published ]
-.RB [ \-l \ list\ all\ published ]
-.SH DESCRIPTION
-.B autoblog
+.Dd autoblog\-VERSION
+.Dt AUTOBLOG 1
+.Os
+.Sh NAME
+.Nm autoblog
+.Nd automatic blog and RSS system
+.Sh SYNOPSIS
+.Nm
+.Op Fl n Ar new post
+.Op Fl p Ar publish draft
+.Op Fl e Ar edit draft
+.Op Fl v Ar view draft
+.Op Fl t Ar delete draft
+.Op Fl r Ar revise published
+.Op Fl c Ar change title
+.Op Fl o Ar view published
+.Op Fl d Ar delete published
+.Op Fl l Ar list all published
+.Sh DESCRIPTION
+.Nm
 generates a blog post page and RSS feed.
-.SH OPTIONS
+.Sh OPTIONS
 The options are as follows:
-.TP
-.BR \-n
+.Bl -tag -width Ds
+.It Fl n Ar new post
 Prompt the user to write a new blog post in HTML
-.TP
-.BR \-p
+.It Fl p Ar publish draft
 Publish one of the posts stored in the .drafts directory. 
-.TP
-.BR \-e
+.It Fl e Ar edit draft
 Edit one of the posts stored in the .drafts directory.
-.TP
-.BR \-v
+.It Fl v Ar view draft
 View one of the posts stored in the .drafts directory.
-.TP
-.BR \-t
+.It Fl t Ar delete draft
 Delete one of the posts stored in the .drafts directory.
-.TP
-.BR \-r
+.It Fl r Ar revise published
 Revise a published post stored in the blog directory.
-.TP
-.BR \-c
+.It Fl c Ar change title
 Change a published post's title.
-.TP
-.BR \-o
+.It Fl o Ar view published
 View a published post stored in the blog directory on your default browser.
-.TP
-.BR \-d
+.It Fl d Ar delete published
 Delete a published post stored in the blog directory.
-.TP
-.BR \-l
+.It Fl l Ar list all published
 List all posts stored in the blog directory.
-.P
+.El
+.Pp
 Only one option at a time can be used.
-.P
+.Sh USAGE
+.Pp
 Run the script inside your website's main directory and edit the website and author
 to match your own information. Make sure that the rest of the variables are properly
-set to match your website's structure. By default, all blog posts are stored in
-.I blog/
-.P
-.B autoblog
-will search for <!--BLOG--> inside
-.I index.html
-and
-.I rss.xml
-in order to put the blog post listings and RSS feed respectively. Inside
-.I blogindex.html
+set to match your website's structure. By default, all blog posts are stored in blog/.
+.Sh REQUIREMENTS
+.Pp
+The following files have to exist in the same directory
+.Nm
+is called:
+.Bl -tag -width Ds
+.It index.html
+Main page.
+.It blogindex.html
+Blog page index.
+.It template.html
+A template file that will be used to format the blog post.
+The TITLE, HEADER and AUTHOR fields must exist and be left as is.
+.It rss.xml
+The RSS feed.
+.El
+.Pp
+.Nm
+will search for <!--BLOG--> inside index.html and rss.xml
+in order to put the blog post listings and RSS feed respectively. Inside blogindex.html
 however, it will search for <!--BLOG [Month Year]--> (e.g <!--BLOG January 1800->).
-.P
-A
-.I template.html
-file needs to exist in your main directory in order for the
-script to run properly. That file is how you want your blog post's generated page
-to look like. The
-.I TITLE
-,
-.I HEADER
-and
-.I AUTHOR
-fields must exist and be left as is.
-.SH AUTHORS
-Christos Margiolis <christos@christosmarg.xyz>
+.Sh AUTHORS
+.An Christos Margiolis Aq Mt christos@christosmarg.xyz
