@@ -16,11 +16,12 @@ TAR = tar -cf
 GZIP = gzip
 
 all: ${BIN}
+	chmod +x ${BIN}
 
 dist:
 	${MKDIR} ${DIST}
 	${CP} -R ${BIN} ${MAN1} blogindex.html index.html LICENSE Makefile\
-	   README.md rss.xml styles.css template.html ${DIST}
+		README.md rss.xml styles.css template.html ${DIST}
 	${TAR} ${DIST}.tar ${DIST}
 	${GZIP} ${DIST}.tar
 	${RM_DIR} ${DIST}
