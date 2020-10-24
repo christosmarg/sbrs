@@ -1,6 +1,6 @@
 # See LICENSE file for copyright and license details.
 
-BIN = autoblog
+BIN = sbrs
 VERSION = 0.1
 DIST = ${BIN}-${VERSION}
 MAN1 = ${BIN}.1

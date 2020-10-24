@@ -28,6 +28,7 @@ main() {
         esac
 }
 
+# TODO: list only html maybe
 list() {
         find $1 -type f ! -name '*final*' 2> /dev/null | awk -F/ '{print $NF}'
 }
@@ -50,10 +51,7 @@ newpost() {
         mkdir -p $draftdir
         read -erp "Title: " title && [ -z "$title" ] &&
                 echo "Please specify a title." && exit
-        blogpost=$(
-                echo "$title" | iconv -cf UTF-8 -t ASCII//TRANSLIT | \
-                tr -d '[:punct:]' | tr '[:upper:]' '[:lower:]' | tr ' ' '-'
-        )
+        blogpost=$(title_fmt "$title")
         [ -f "$blogdir/$blogpost.html" ] && echo "File exists already." && exit
         $EDITOR "$draftdir/$blogpost.html"
         sed "s/TITLE/$title/g;s/HEADER/$title/g;s/AUTHOR/$author/g;" $template \
@@ -66,6 +64,11 @@ confirm_action() {
 
 psed() {
         sed -i.orig "$@" && rm *.orig $blogdir/*.orig 2> /dev/null
+}
+
+title_fmt() {
+        echo "$1" | iconv -cf UTF-8 -t ASCII//TRANSLIT | \
+        tr -d '[:punct:]' | tr '[:upper:]' '[:lower:]' | tr ' ' '-'
 }
 
 title_get() {
@@ -148,10 +151,7 @@ title_change() {
         read -erp "Give post a new title: " newtitle && \
                 confirm_action "Are you sure (y/N)? " "y"
         oldtitle=$(title_get $blogdir/$blogpost.html)
-        newtitle_fmt=$(
-                echo "$newtitle" | iconv -cf UTF-8 -t ASCII//TRANSLIT | \
-                tr -d '[:punct:]' | tr '[:upper:]' '[:lower:]' | tr ' ' '-'
-        )
+        newtitle_fmt=$(title_fmt "$newtitle")
         [ -f "$blogdir/$newtitle_fmt.html" ] && echo "File exists already." && exit
 
         psed "s/$blogpost/$newtitle_fmt/g;s/$oldtitle/$newtitle/g" \
@@ -179,7 +179,7 @@ missing_check() {
 }
 
 usage() {
-        printf "Usage: autoblog [OPTION]\n\n"
+        printf "Usage: sbrs [OPTION]\n\n"
         printf "Options:\n"
         printf "  -n\t\tNew post\n"
         printf "  -p\t\tPublish draft post\n"

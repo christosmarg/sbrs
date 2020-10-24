@@ -1,10 +1,10 @@
-# autoblog
+# sbrs
 
 A small and simple blog and RSS shell script written in POSIX shell.
 
 ## Features
 
-`autoblog` can do the following:
+`sbrs` can do the following:
 
 * Define a `blog` directory where all blog posts will be stored.
 * Set up a seperate `HTML` blog page with CSS styling of your choosing.
@@ -21,7 +21,7 @@ be installed in `usr/local/bin/`. You can change the install path
 by editing the `BIN_DIR` variable in the `Makefile`.
 
 ```shell
-$ cd path/to/autoblog/
+$ cd path/to/sbrs/
 $ sudo make install
 ```
 
@@ -40,12 +40,12 @@ The following files have to exist
 * `template.html`
 * `styles.css`
 
-Inside the `autoblog` script, change the `website` and `author` variables
+Inside the `sbrs` script, change the `website` and `author` variables
 to your website's URL and your name and make sure the rest
 of the variables are properly set to match your website's
 structure. By default, all blog posts are stored in `blog/`.  
 
-`autoblog` will search for `<!--BLOG-->` inside `index.html`,
+`sbrs` will search for `<!--BLOG-->` inside `index.html`,
 `blogindex.html` and `rss.xml` in order to put the blog post
 listings and RSS feed below it.
 
