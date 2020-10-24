@@ -14,17 +14,17 @@ template="template.html"
 main() {
         missing_check
         case $1 in
-            -n*) newpost ;;
-            -p*) listposts $draftdir && publish ;;
-            -e*) listposts $draftdir && $EDITOR $draftdir/$blogpost.html ;;
-            -v*) listposts $draftdir && view ;;
-            -t*) listposts $draftdir && delete $draftdir ;;
-            -r*) listposts $blogdir  && $EDITOR $blogdir/$blogpost.html ;;
-            -c*) listposts $blogdir  && title_change ;;
-            -o*) listposts $blogdir  && $BROWSER $blogdir/$blogpost.html ;;
-            -d*) listposts $blogdir  && delete $blogdir ;;
-            -l*) listposts $blogdir ;;
-            *) usage ;;
+                -n*) newpost ;;
+                -p*) listposts $draftdir && publish ;;
+                -e*) listposts $draftdir && $EDITOR $draftdir/$blogpost.html ;;
+                -v*) listposts $draftdir && view ;;
+                -t*) listposts $draftdir && delete $draftdir ;;
+                -r*) listposts $blogdir  && $EDITOR $blogdir/$blogpost.html ;;
+                -c*) listposts $blogdir  && title_change ;;
+                -o*) listposts $blogdir  && $BROWSER $blogdir/$blogpost.html ;;
+                -d*) listposts $blogdir  && delete $blogdir ;;
+                -l*) listposts $blogdir ;;
+                *) usage ;;
         esac
 }
 
@@ -33,7 +33,7 @@ list() {
 }
 
 listposts() {
-        # 10 doesn't work
+        #TODO: 10 doesn't work for some reason. fix.
         printf "Listing posts in %s (total: %d)\n" "$1" "$(list $1 | wc -l)"
         nposts=$(expr $(list $1 | wc -l))
         list $1 | nl
@@ -68,12 +68,13 @@ psed() {
         sed -i.orig "$@" && rm *.orig $blogdir/*.orig 2> /dev/null
 }
 
+title_get() {
+        grep "<title>" $1 | sed "s/<title>//;s/<\/title>//;s/ *//;"
+}
+
 publish() {
         confirm_action "Publish post (y/N)? " "y"
-        title=$(
-                grep "<title>" $draftdir/$blogpost.final.html | \
-                sed "s/<title>//;s/<\/title>//;s/ *//;"
-        )
+        title=$(title_get $draftdir/$blogpost.final.html)
         psed "s/^/\ \ \ \ \ \ \ \ /" $draftdir/$blogpost.html # bad?
         psed "/<\!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost.final.html
         sed "s/</\&lt;/g;s/>/\&gt;/g;" "$draftdir/$blogpost.html" > $draftdir/$blogpost.xml
@@ -97,17 +98,19 @@ publish() {
         echo "Published $blogpost."
 }
 
-# i dont like how this looks...
+#TODO: i dont like how this looks...
 blogindex_update() {
         dateid=$(date '+%b %Y' | sed 's/\ //' | tr '[:upper:]' '[:lower:]')
         if [ -z "$(grep "$dateid" $blogindex)" ]; then
                 datename=$(date '+%B %Y')
-                monthheader=$(printf "\\
+                monthheader=$(
+                        printf "\\
 <h2 id=\"%s\">%s<\/h2> \\
 <ul> \\
 \t<\!--BLOG %s--> \\
 <\/ul>" \
-                    "$dateid" "$datename" "$datename" | sed 's/^/\t\t\t/' | expand -t4)
+                        "$dateid" "$datename" "$datename" | sed 's/^/\t\t\t/' | expand -t4
+                )
 
                 psed "/<\!--BLOG-->/a $monthheader" $blogindex
         fi
@@ -115,7 +118,7 @@ blogindex_update() {
 
 remove_last_index_entry() {
         indexentries=$(sed "1,/<\!--BLOG-->/d" $index | grep "<li>") &&
-                [ $(($(echo "$indexentries" | wc -l))) -gt 7 ] && 
+                [ $(expr $(echo "$indexentries" | wc -l)) -gt 7 ] && 
                 lastentry=$(echo "$indexentries" | tail -2 | head -1) &&
                 psed "s|$lastentry||;" $index
 }
@@ -124,7 +127,7 @@ delete() {
         confirm_action "Are you sure you want to delete \"$blogpost\" (y/N)? " "y"
         if [ "$1" = "$blogdir" ]; then
                 psed "/$blogpost/d" $index $blogindex
-                # make portable
+                # TODO: make portable
                 gsed -ni "/<item>/{ :loop; N; s/<\\/item>/&/; T loop; s/$blogpost/&/; T keep; d }; :keep; p" $rssfile
         fi
         remove_contents $1 && echo "Removed $blogpost."
@@ -136,10 +139,7 @@ remove_contents() {
 
 view() {
         cat $draftdir/$blogpost.final.html > $draftdir/$blogpost.final-view.html
-        title=$(
-                grep "<title>" $draftdir/$blogpost.final-view.html | \
-                sed "s/<title>//;s/<\/title>//;s/ *//;"
-        )
+        title=$(title_get $draftdir/$blogpost.final-view.html)
         psed "/<\!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost.final-view.html
         $BROWSER $draftdir/$blogpost.final-view.html
 }
@@ -147,11 +147,7 @@ view() {
 title_change() {
         read -erp "Give post a new title: " newtitle && \
                 confirm_action "Are you sure (y/N)? " "y"
-        oldtitle=$(
-                # same with view()
-                grep "<title>" $blogdir/$blogpost.html | 
-                sed "s/<title>//;s/<\/title>//;s/ *//;"
-        )
+        oldtitle=$(title_get $blogdir/$blogpost.html)
         newtitle_fmt=$(
                 echo "$newtitle" | iconv -cf UTF-8 -t ASCII//TRANSLIT | \
                 tr -d '[:punct:]' | tr '[:upper:]' '[:lower:]' | tr ' ' '-'
@@ -178,8 +174,8 @@ missing_check() {
         [ "$missing" = "true" ] && exit
 
         [ ! -d "$blogdir" ] &&
-            confirm_action "Blog directory doesn't exist. Intialize it here (y/n)? " "y" &&
-            mkdir -pv $blogdir
+                confirm_action "Blog directory doesn't exist. Intialize it here (y/n)? " "y" &&
+                mkdir -pv $blogdir
 }
 
 usage() {
