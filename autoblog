@@ -10,7 +10,6 @@ index="index.html"
 rssfile="rss.xml"
 template="template.html"
 [ -z "$EDITOR" ] && EDITOR="vim"
-[ "$OSTYPE" = "freebsd" ] && alias sed="gsed"
 
 main() {
         missing_check
@@ -30,10 +29,11 @@ main() {
 }
 
 list() {
-        find $1 -type f ! -name '*final*' | awk -F/ '{print $NF}'
+        find $1 -type f ! -name '*final*' 2> /dev/null | awk -F/ '{print $NF}'
 }
 
 listposts() {
+        # 10 doesn't work
         printf "Listing posts in %s (total: %d)\n" "$1" "$(list $1 | wc -l)"
         nposts=$(expr $(list $1 | wc -l))
         list $1 | nl
@@ -57,37 +57,42 @@ newpost() {
         [ -f "$blogdir/$blogpost.html" ] && echo "File exists already." && exit
         $EDITOR "$draftdir/$blogpost.html"
         sed "s/TITLE/$title/g;s/HEADER/$title/g;s/AUTHOR/$author/g;" $template \
-                > $draftdir/$blogpost-final.html
+                > $draftdir/$blogpost.final.html
 }
 
 confirm_action() {
         read -erp "$1" confirm && [ "$confirm" = "$2" ] || exit
 }
 
+psed() {
+        sed -i.orig "$@" && rm *.orig $blogdir/*.orig 2> /dev/null
+}
+
 publish() {
         confirm_action "Publish post (y/N)? " "y"
         title=$(
-                grep "<title>" $draftdir/$blogpost-final.html | \
+                grep "<title>" $draftdir/$blogpost.final.html | \
                 sed "s/<title>//;s/<\/title>//;s/ *//;"
         )
-        sed -i "s/^/\ \ \ \ \ \ \ \ /" $draftdir/$blogpost.html # bad?
-        sed -i "/<\!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost-final.html
+        psed "s/^/\ \ \ \ \ \ \ \ /" $draftdir/$blogpost.html # bad?
+        psed "/<\!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost.final.html
         sed "s/</\&lt;/g;s/>/\&gt;/g;" "$draftdir/$blogpost.html" > $draftdir/$blogpost.xml
-        cp $draftdir/$blogpost-final.html $blogdir && 
-                mv $blogdir/$blogpost-final.html $blogdir/$blogpost.html
+        cp $draftdir/$blogpost.final.html $blogdir && 
+                mv $blogdir/$blogpost.final.html $blogdir/$blogpost.html
 
         printf "\t\t\t\t<li>%s &ndash; <a href=\"%s\">%s</a></li>\n" \
                 "$(date '+%Y %b %d')" "$blogdir/$blogpost.html" "$title" | \
-                expand -t4 > $draftdir/$blogpost-final-htmlentry
+                expand -t4 > $draftdir/$blogpost.final-htmlentry
 
-        printf "<item>\n\t<title>%s</title>\n\t<guid>%s</guid>\n\t<pubDate>%s</pubDate>\n\t<description>\n\t\t%s\n \t</description>\n</item>\n" "$title" "$website/$blogdir/$blogpost.html" "$(date '+%a, %d %b %Y')" "$(cat $draftdir/$blogpost.xml)" | expand -t4 > $draftdir/$blogpost-final-rssentry
+        printf "<item>\n\t<title>%s</title>\n\t<guid>%s</guid>\n\t<pubDate>%s</pubDate>\n\t<description>\n\t\t%s\n \t</description>\n</item>\n" "$title" "$website/$blogdir/$blogpost.html" "$(date '+%a, %d %b %Y')" "$(cat $draftdir/$blogpost.xml)" | expand -t4 > $draftdir/$blogpost.final-rssentry
 
+        # using || because of psed
         blogindex_update
-        sed -i "/<\!--BLOG $(date '+%B %Y')-->/r $draftdir/$blogpost-final-htmlentry" $blogindex &&
+        psed "/<\!--BLOG $(date '+%B %Y')-->/r $draftdir/$blogpost.final-htmlentry" $blogindex ||
                 echo "Blogindex... done."
-        sed -i "/<\!--BLOG-->/r $draftdir/$blogpost-final-htmlentry" $index && echo "Index... done"
-        sed -i "/<\!--BLOG-->/r $draftdir/$blogpost-final-rssentry" $rssfile && echo "RSS... done"
-        remove_last_index_entry && echo "Removing last entry from index file... done"
+        psed "/<\!--BLOG-->/r $draftdir/$blogpost.final-htmlentry" $index || echo "Index... done"
+        psed "/<\!--BLOG-->/r $draftdir/$blogpost.final-rssentry" $rssfile || echo "RSS... done"
+        remove_last_index_entry || echo "Removing last entry from index file... done"
         remove_contents $draftdir && echo "Cleaning up .drafts... done"
         echo "Published $blogpost."
 }
@@ -104,7 +109,7 @@ blogindex_update() {
 <\/ul>" \
                     "$dateid" "$datename" "$datename" | sed 's/^/\t\t\t/' | expand -t4)
 
-                sed -i "/<\!--BLOG-->/a $monthheader" $blogindex
+                psed "/<\!--BLOG-->/a $monthheader" $blogindex
         fi
 }
 
@@ -112,30 +117,31 @@ remove_last_index_entry() {
         indexentries=$(sed "1,/<\!--BLOG-->/d" $index | grep "<li>") &&
                 [ $(($(echo "$indexentries" | wc -l))) -gt 7 ] && 
                 lastentry=$(echo "$indexentries" | tail -2 | head -1) &&
-                sed -i "s|$lastentry||;" $index
+                psed "s|$lastentry||;" $index
 }
 
 delete() {
         confirm_action "Are you sure you want to delete \"$blogpost\" (y/N)? " "y"
         if [ "$1" = "$blogdir" ]; then
-                sed -i "/$blogpost/d" $index $blogindex
-                sed -ni "/<item>/{ :loop; N; s/<\\/item>/&/; T loop; s/$blogpost/&/; T keep; d }; :keep; p" $rssfile
+                psed "/$blogpost/d" $index $blogindex
+                # make portable
+                gsed -ni "/<item>/{ :loop; N; s/<\\/item>/&/; T loop; s/$blogpost/&/; T keep; d }; :keep; p" $rssfile
         fi
         remove_contents $1 && echo "Removed $blogpost."
 }
 
 remove_contents() {
-        ls $1 | grep -x "$blogpost\.\S*\|$blogpost-final\S*" | sed "s/^/$1\//" | xargs rm
+        ls $1 | grep -x "$blogpost\...*" | sed "s/^/$1\//" | xargs rm
 }
 
 view() {
-        cat $draftdir/$blogpost-final.html > $draftdir/$blogpost-final-view.html
+        cat $draftdir/$blogpost.final.html > $draftdir/$blogpost.final-view.html
         title=$(
-                grep "<title>" $draftdir/$blogpost-final-view.html | \
+                grep "<title>" $draftdir/$blogpost.final-view.html | \
                 sed "s/<title>//;s/<\/title>//;s/ *//;"
         )
-        sed -i "/<\!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost-final-view.html
-        $BROWSER $draftdir/$blogpost-final-view.html
+        psed "/<\!--BLOG-->/r $draftdir/$blogpost.html" $draftdir/$blogpost.final-view.html
+        $BROWSER $draftdir/$blogpost.final-view.html
 }
 
 title_change() {
@@ -150,7 +156,9 @@ title_change() {
                 echo "$newtitle" | iconv -cf UTF-8 -t ASCII//TRANSLIT | \
                 tr -d '[:punct:]' | tr '[:upper:]' '[:lower:]' | tr ' ' '-'
         )
-        sed -i "s/$blogpost/$newtitle_fmt/g;s/$oldtitle/$newtitle/g" \
+        [ -f "$blogdir/$newtitle_fmt.html" ] && echo "File exists already." && exit
+
+        psed "s/$blogpost/$newtitle_fmt/g;s/$oldtitle/$newtitle/g" \
                 $blogdir/$blogpost.html $index $blogindex $rssfile &&
                 mv $blogdir/$blogpost.html $blogdir/$newtitle_fmt.html &&
                 echo "Title changed successfully: $oldtitle -> $newtitle"

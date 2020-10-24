@@ -1,8 +1,6 @@
 # autoblog
 
-A small and simple blog and RSS shell script inspired by
-[Luke Smith's lb](https://github.com/LukeSmithxyz/lb) but
-with many modifications and additions to match my own workflow.
+A small and simple blog and RSS shell script written in POSIX shell.
 
 ## Features
 
