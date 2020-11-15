@@ -1,0 +1,51 @@
+sbrs
+====
+A small and simple blog and RSS shell script written in POSIX shell.
+
+Preparation
+-----------
+Inside the 'sbrs' script, change the 'WEBSITE' and 'AUTHOR' variables
+to match your website's URL and your name.
+
+In case you don't edit the script further, the structure of your
+website's directory should should like this. The
+files below need to exist with the same names.
+
+        ├── blog
+        |   └── here reside your blog posts
+        ├── index.html
+        ├── blogindex.html
+        ├── template.html
+        └── rss.xml
+
+Inside 'index.html', 'blogindex.html' and 'rss.xml' sbrs will search for
+<!--BLOG--> in order to put the blog post listings and RSS feed below it.
+
+The 'template.html' file is how you want your blog post's page to look like.
+See my own 'template.html' for more. The 'TITLE', 'HEADER' and 'AUTHOR'
+fields must exist and be left as is.
+
+Installation 
+------------
+sbrs will be installed in /usr/local/bin
+
+        cd path/to/sbrs/
+        sudo make install
+
+Usage
+-----
+You must always run the script inside your website's main directory.
+Run it with one of the following options. Only one option can be used
+at a time.
+
+Options:
+  -n        New post
+  -p        Publish draft post
+  -e        Edit draft post
+  -v        View draft post in browser
+  -t        Delete draft post
+  -r        Revise published post
+  -c        Change title
+  -o        View published post in browser
+  -d        Delete published post
+  -l        List all published posts

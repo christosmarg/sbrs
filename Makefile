@@ -1,4 +1,5 @@
 # See LICENSE file for copyright and license details.
+.POSIX:
 
 BIN = sbrs
 VERSION = 0.1
