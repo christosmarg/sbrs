@@ -49,3 +49,8 @@ Options:
   -o        View published post in browser
   -d        Delete published post
   -l        List all published posts
+
+Notes:
+------
+Do NOT edit the various comments that the script writes inside the files,
+otherwise it'll not work properly, or work at all.

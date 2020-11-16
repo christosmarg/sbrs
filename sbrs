@@ -33,14 +33,13 @@ list() {
 }
 
 listposts() {
-        #TODO: 10 doesn't work for some reason. fix.
         printf "Listing posts in %s (total: %d)\n" "$1" "$(list $1 | wc -l)"
         nposts=$(expr $(list $1 | wc -l))
         list $1 | nl
         [ $nposts -eq 0 ] && echo "No posts available in $1" && exit
-        read -erp "Choose a post to by number: " num             \
-                && [ -z "$(echo $num | grep -E "^[1-9]+$")" ]    \
-                || [ $(expr $num) -gt $nposts ] || [ -z "$num" ] \
+        read -erp "Choose a post to by number: " num                            \
+                && [ -z "$(echo $num | grep -E "^[0-9]+$" | grep -v "^0")" ]    \
+                || [ $(expr $num) -gt $nposts ] || [ -z "$num" ]                \
                 && echo "No post selected." && exit
         blogpost=$(list $1 | nl | grep -w "$num" | awk '{print $2}')
         blogpost=$(basename -s ".html" $blogpost)
@@ -87,7 +86,7 @@ publish() {
                 "$(date '+%Y %b %d')" "$BLOGDIR/$blogpost.html" "$title" | \
                 expand -t8 > $DRAFTDIR/$blogpost.final-htmlentry
 
-        printf "<item>\n\t<title>%s</title>\n\t<guid>%s</guid>\n\t<pubDate>%s</pubDate>\n\t<description>\n\t%s\n\t</description>\n</item>\n" "$title" "$WEBSITE/$BLOGDIR/$blogpost.html" "$(date '+%a, %d %b %Y')" "$(cat $DRAFTDIR/$blogpost.xml)" | expand -t8 > $DRAFTDIR/$blogpost.final-rssentry
+        printf "<\!--BEGIN $blogpost-->\n<item>\n\t<title>%s</title>\n\t<guid>%s</guid>\n\t<pubDate>%s</pubDate>\n\t<description>\n\t%s\n\t</description>\n</item>\n<\!--END $blogpost-->\n" "$title" "$WEBSITE/$BLOGDIR/$blogpost.html" "$(date '+%a, %d %b %Y')" "$(cat $DRAFTDIR/$blogpost.xml)" | expand -t8 > $DRAFTDIR/$blogpost.final-rssentry
 
         # using || because of psed
         blogindex_update
@@ -100,23 +99,16 @@ publish() {
         echo "Published $blogpost."
 }
 
-#TODO: i dont like how this looks... also needs portable solution
 blogindex_update() {
         dateid=$(date '+%b %Y' | sed 's/\ //' | tr '[:upper:]' '[:lower:]')
         if [ -z "$(grep "$dateid" $BLOGINDEX)" ]; then
                 datename=$(date '+%B %Y')
-                monthheader=$(
-                        printf "\\
-<h2 id=\"%s\">%s<\/h2> \\
-<ul> \\
-\t<\!--BLOG %s--> \\
-<\/ul>" \
-                        "$dateid" "$datename" "$datename" | sed "s/^/        /" | expand -t8
-                )
-
-                echo "$monthheader"
-                # WTF is going wrong
-                sed "/<\!--BLOG-->/a $monthheader" $BLOGINDEX
+                psed "/<\!--BLOG-->/a\\
+\        <h2 id=\\"$dateid\\">$datename<\\/h2> \\
+\        <ul> \\
+\                <\\!--BLOG $datename--> \\
+\        <\\/ul> \\
+" $BLOGINDEX
         fi
 }
 
@@ -131,8 +123,7 @@ delete() {
         confirm_action "Are you sure you want to delete \"$blogpost\" (y/N)? " "y"
         if [ "$1" = "$BLOGDIR" ]; then
                 psed "/$blogpost/d" $INDEX $BLOGINDEX
-                # TODO: make portable
-                gsed -ni "/<item>/{ :loop; N; s/<\\/item>/&/; T loop; s/$blogpost/&/; T keep; d }; :keep; p" $RSSFILE
+                psed "/<\!--BEGIN $blogpost-->/,/<\!--END $blogpost-->/d" $RSSFILE
         fi
         remove_contents $1 && echo "Removed $blogpost."
 }
