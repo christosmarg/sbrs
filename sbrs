@@ -9,169 +9,180 @@ BLOGINDEX="blogindex.html"
 INDEX="index.html"
 RSSFILE="rss.xml"
 TEMPLATE="template.html"
-[ -z "$EDITOR" ] && EDITOR="vim"
+test -z "$EDITOR" && EDITOR="vim"
 
 main() {
-        missing_check
+        test -f "$TEMPLATE"     || err "$TEMPLATE: missing file"
+        test -f "$BLOGINDEX"    || err "$BLOGINDEX: missing file"
+        test -f "$INDEX"        || err "$INDEX: missing file"
+        test -f "$RSSFILE"      || err "$RSSFILE: missing file"
+
+        if ! test -d "$BLOGDIR"; then
+                confirmact "Blog directory doesn't exist. Intialize it here (y/n)? " "y"
+                mkdir -pv "$BLOGDIR"
+        fi
+
         case $1 in
                 -n*) newpost ;;
-                -p*) listposts $DRAFTDIR && publish ;;
-                -e*) listposts $DRAFTDIR && $EDITOR $DRAFTDIR/$blogpost.html ;;
-                -v*) listposts $DRAFTDIR && view ;;
-                -t*) listposts $DRAFTDIR && delete $DRAFTDIR ;;
-                -r*) listposts $BLOGDIR  && $EDITOR $BLOGDIR/$blogpost.html ;;
-                -c*) listposts $BLOGDIR  && title_change ;;
-                -o*) listposts $BLOGDIR  && $BROWSER $BLOGDIR/$blogpost.html ;;
-                -d*) listposts $BLOGDIR  && delete $BLOGDIR ;;
-                -l*) listposts $BLOGDIR ;;
+                -p*) listposts "$DRAFTDIR" && publish ;;
+                -e*) listposts "$DRAFTDIR" && $EDITOR "$DRAFTDIR/$blogpost.html" ;;
+                -v*) listposts "$DRAFTDIR" && view ;;
+                -t*) listposts "$DRAFTDIR" && delete "$DRAFTDIR" ;;
+                # edit rss too
+                -r*) listposts "$BLOGDIR"  && $EDITOR "$BLOGDIR/$blogpost.html" ;;
+                -c*) listposts "$BLOGDIR"  && titlechange ;;
+                -o*) listposts "$BLOGDIR"  && $BROWSER "$BLOGDIR/$blogpost.html" ;;
+                -d*) listposts "$BLOGDIR"  && delete "$BLOGDIR" ;;
+                -l*) listposts "$BLOGDIR" ;;
                 *) usage ;;
         esac
 }
 
+err() {
+        echo "${0##*/}: $@" && exit
+}
+psed() {
+        sed -i.orig "$@" && rm *.orig "$BLOGDIR/*.orig" 2> /dev/null
+}
+
+confirmact() {
+        read -erp "$1" act && test "$act" = "$2" || exit
+}
+
 list() {
-        find $1 -type f -name '*\.html' ! -name '*final*' 2> /dev/null | awk -F/ '{print $NF}'
+        find "$1" -type f -name '*\.html' ! -name '*\.final*' 2> /dev/null |
+        awk -F/ '{print $NF}'
 }
 
 listposts() {
-        printf "Listing posts in %s (total: %d)\n" "$1" "$(list $1 | wc -l)"
-        nposts=$(expr $(list $1 | wc -l))
-        list $1 | nl
-        [ $nposts -eq 0 ] && echo "No posts available in $1" && exit
-        read -erp "Choose a post to by number: " num                            \
-                && [ -z "$(echo $num | grep -E "^[0-9]+$" | grep -v "^0")" ]    \
-                || [ $(expr $num) -gt $nposts ] || [ -z "$num" ]                \
-                && echo "No post selected." && exit
-        blogpost=$(list $1 | nl | grep -w "$num" | awk '{print $2}')
-        blogpost=$(basename -s ".html" $blogpost)
+        printf "Listing posts in: %s (total: %d)\n" "$1" "$(list "$1" | wc -l)"
+        list "$1" | nl
+        nposts=$(expr $(list "$1" | wc -l))
+        test $nposts -eq 0 && err "no posts available in: $1"
+        read -erp "Choose a post to by number: " num
+        if ! test -z "$(echo $num | grep -E "^[0-9]+$" | grep -v "^0")"; then
+                test $(expr $num) -gt $nposts && err "no post selected"
+                blogpost=$(list "$1" | nl | grep -w "$num" | awk '{print $2}')
+                blogpost=${blogpost%.*}
+        else
+                err "no post selected"
+        fi
 }
 
 newpost() {
-        mkdir -p $DRAFTDIR
-        read -erp "Title: " title && [ -z "$title" ] &&
-                echo "Please specify a title." && exit
-        blogpost=$(title_fmt "$title")
-        [ -f "$BLOGDIR/$blogpost.html" ] && echo "File exists already." && exit
+        mkdir -p "$DRAFTDIR"
+        read -erp "Title: " title
+        test -z "$title" && err "please specify a title"
+        blogpost=$(titlefmt "$title")
+        test -f "$BLOGDIR/$blogpost.html" && err "file exists already"
         $EDITOR "$DRAFTDIR/$blogpost.html"
-        sed "s/TITLE/$title/g;s/HEADER/$title/g;s/AUTHOR/$AUTHOR/g;" $TEMPLATE \
-                > $DRAFTDIR/$blogpost.final.html
+        sed "s/TITLE/$title/g;s/HEADER/$title/g;s/AUTHOR/$AUTHOR/g;" "$TEMPLATE" \
+        > "$DRAFTDIR/$blogpost.final.html"
 }
 
-confirm_action() {
-        read -erp "$1" confirm && [ "$confirm" = "$2" ] || exit
-}
-
-psed() {
-        sed -i.orig "$@" && rm *.orig $BLOGDIR/*.orig 2> /dev/null
-}
-
-title_fmt() {
-        echo "$1" | iconv -cf UTF-8 -t ASCII//TRANSLIT | \
+titlefmt() {
+        echo "$1" | iconv -cf UTF-8 -t ASCII//TRANSLIT |
         tr -d '[:punct:]' | tr '[:upper:]' '[:lower:]' | tr ' ' '-'
 }
 
-title_get() {
-        grep "<title>" $1 | sed "s/<title>//;s/<\/title>//;s/ *//;"
+titleget() {
+        grep "<title>" "$1" | sed "s/<title>//;s/<\/title>//;s/ *//;"
 }
 
-publish() {
-        confirm_action "Publish post (y/N)? " "y"
-        title=$(title_get $DRAFTDIR/$blogpost.final.html)
-        psed "s/^/\ \ \ \ \ \ \ \ /" $DRAFTDIR/$blogpost.html # bad?
-        psed "/<\!--BLOG-->/r $DRAFTDIR/$blogpost.html" $DRAFTDIR/$blogpost.final.html
-        sed "s/</\&lt;/g;s/>/\&gt;/g;" "$DRAFTDIR/$blogpost.html" > $DRAFTDIR/$blogpost.xml
-        cp $DRAFTDIR/$blogpost.final.html $BLOGDIR && 
-                mv $BLOGDIR/$blogpost.final.html $BLOGDIR/$blogpost.html
+titlechange() {
+        read -erp "Give post a new title: " newtitle
+        confirmact "Are you sure (y/N)? " "y"
+        oldtitle=$(titleget "$BLOGDIR/$blogpost.html")
+        newtitlefmt=$(titlefmt "$newtitle")
+        test -f "$BLOGDIR/$newtitlefmt.html" && err "file exists already"
 
-        printf "\t\t<li>%s &ndash; <a href=\"%s\">%s</a></li>\n" \
-                "$(date '+%Y %b %d')" "$BLOGDIR/$blogpost.html" "$title" | \
-                expand -t8 > $DRAFTDIR/$blogpost.final-htmlentry
-
-        printf "<\!--BEGIN $blogpost-->\n<item>\n\t<title>%s</title>\n\t<guid>%s</guid>\n\t<pubDate>%s</pubDate>\n\t<description>\n\t%s\n\t</description>\n</item>\n<\!--END $blogpost-->\n" "$title" "$WEBSITE/$BLOGDIR/$blogpost.html" "$(date '+%a, %d %b %Y')" "$(cat $DRAFTDIR/$blogpost.xml)" | expand -t8 > $DRAFTDIR/$blogpost.final-rssentry
-
-        # using || because of psed
-        blogindex_update
-        psed "/<\!--BLOG $(date '+%B %Y')-->/r $DRAFTDIR/$blogpost.final-htmlentry" $BLOGINDEX ||
-                echo "Blogindex... done."
-        psed "/<\!--BLOG-->/r $DRAFTDIR/$blogpost.final-htmlentry" $INDEX || echo "Index... done"
-        psed "/<\!--BLOG-->/r $DRAFTDIR/$blogpost.final-rssentry" $RSSFILE || echo "RSS... done"
-        remove_last_index_entry || echo "Removing last entry from index file... done"
-        remove_contents $DRAFTDIR && echo "Cleaning up $DRAFTDIR... done"
-        echo "Published $blogpost."
+        psed "s/$blogpost/$newtitlefmt/g;s/$oldtitle/$newtitle/g" \
+        "$BLOGDIR/$blogpost.html" "$INDEX" "$BLOGINDEX" "$RSSFILE" &&
+        mv "$BLOGDIR/$blogpost.html" "$BLOGDIR/$newtitlefmt.html" &&
+        echo "Title changed successfully: $oldtitle -> $newtitle"
 }
 
-blogindex_update() {
+rmcontents() {
+        # replace with find(1)
+        ls "$1" | grep -x "$blogpost\...*" | sed "s/^/$1\//" | xargs rm
+}
+
+rmlastentry() {
+        indexentries=$(sed "1,/<\!--BLOG-->/d" "$INDEX" | grep "<li>")
+        if test $(expr $(echo "$indexentries" | wc -l)) -gt 7; then
+                lastentry=$(echo "$indexentries" | tail -2 | head -1) &&
+                psed "s|$lastentry||;" "$INDEX"
+        fi
+}
+
+blogindexupdate() {
         dateid=$(date '+%b %Y' | sed 's/\ //' | tr '[:upper:]' '[:lower:]')
-        if [ -z "$(grep "$dateid" $BLOGINDEX)" ]; then
+        if test -z "$(grep "$dateid" "$BLOGINDEX")"; then
                 datename=$(date '+%B %Y')
                 psed "/<\!--BLOG-->/a\\
 \        <h2 id=\\"$dateid\\">$datename<\\/h2> \\
 \        <ul> \\
 \                <\\!--BLOG $datename--> \\
 \        <\\/ul> \\
-" $BLOGINDEX
+" "$BLOGINDEX"
         fi
-}
-
-remove_last_index_entry() {
-        indexentries=$(sed "1,/<\!--BLOG-->/d" $INDEX | grep "<li>") &&
-                [ $(expr $(echo "$indexentries" | wc -l)) -gt 7 ] && 
-                lastentry=$(echo "$indexentries" | tail -2 | head -1) &&
-                psed "s|$lastentry||;" $INDEX
-}
-
-delete() {
-        confirm_action "Are you sure you want to delete \"$blogpost\" (y/N)? " "y"
-        if [ "$1" = "$BLOGDIR" ]; then
-                psed "/$blogpost/d" $INDEX $BLOGINDEX
-                psed "/<\!--BEGIN $blogpost-->/,/<\!--END $blogpost-->/d" $RSSFILE
-        fi
-        remove_contents $1 && echo "Removed $blogpost."
-}
-
-remove_contents() {
-        ls $1 | grep -x "$blogpost\...*" | sed "s/^/$1\//" | xargs rm
 }
 
 view() {
-        cat $DRAFTDIR/$blogpost.final.html > $DRAFTDIR/$blogpost.final-view.html
-        title=$(title_get $DRAFTDIR/$blogpost.final-view.html)
-        psed "/<\!--BLOG-->/r $DRAFTDIR/$blogpost.html" $DRAFTDIR/$blogpost.final-view.html
-        $BROWSER $DRAFTDIR/$blogpost.final-view.html
+        cat "$DRAFTDIR/$blogpost.final.html" > "$DRAFTDIR/$blogpost.final-view.html"
+        psed "/<\!--BLOG-->/r $DRAFTDIR/$blogpost.html" "$DRAFTDIR/$blogpost.final-view.html"
+        $BROWSER "$DRAFTDIR/$blogpost.final-view.html"
 }
 
-title_change() {
-        read -erp "Give post a new title: " newtitle && \
-                confirm_action "Are you sure (y/N)? " "y"
-        oldtitle=$(title_get $BLOGDIR/$blogpost.html)
-        newtitle_fmt=$(title_fmt "$newtitle")
-        [ -f "$BLOGDIR/$newtitle_fmt.html" ] && echo "File exists already." && exit
-
-        psed "s/$blogpost/$newtitle_fmt/g;s/$oldtitle/$newtitle/g" \
-                $BLOGDIR/$blogpost.html $INDEX $BLOGINDEX $RSSFILE &&
-                mv $BLOGDIR/$blogpost.html $BLOGDIR/$newtitle_fmt.html &&
-                echo "Title changed successfully: $oldtitle -> $newtitle"
+delete() {
+        confirmact "Are you sure you want to delete \"$blogpost\" (y/N)? " "y"
+        if test "$1" = "$BLOGDIR"; then
+                psed "/$blogpost/d" "$INDEX" "$BLOGINDEX"
+                psed "/<\!--BEGIN $blogpost-->/,/<\!--END $blogpost-->/d" "$RSSFILE"
+        fi
+        rmcontents "$1" && echo "Removed $blogpost."
 }
 
-err() {
-        echo "$1 file is missing. . ."
-        missing=true
+publish() {
+        confirmact "Publish post (y/N)? " "y"
+        title=$(titleget "$DRAFTDIR/$blogpost.final.html")
+        # bad?
+        psed "s/^/\ \ \ \ \ \ \ \ /" "$DRAFTDIR/$blogpost.html"
+        psed "/<\!--BLOG-->/r $DRAFTDIR/$blogpost.html" "$DRAFTDIR/$blogpost.final.html"
+        sed "s/</\&lt;/g;s/>/\&gt;/g;" "$DRAFTDIR/$blogpost.html" > "$DRAFTDIR/$blogpost.xml"
+        cp "$DRAFTDIR/$blogpost.final.html" "$BLOGDIR/$blogpost.html"
+
+        printf "\t\t<li>%s &ndash; <a href=\"%s\">%s</a></li>\n" \
+        "$(date '+%Y %b %d')" "$BLOGDIR/$blogpost.html" "$title" |
+        expand -t8 > "$DRAFTDIR/$blogpost.final-htmlentry"
+        rsscreate | expand -t8 > "$DRAFTDIR/$blogpost.final-rssentry"
+
+        # using || because of psed
+        blogindexupdate
+        psed "/<\!--BLOG $(date '+%B %Y')-->/r $DRAFTDIR/$blogpost.final-htmlentry" \
+        "$BLOGINDEX" || echo "Blogindex... done."
+        psed "/<\!--BLOG-->/r $DRAFTDIR/$blogpost.final-htmlentry" "$INDEX" || echo "Index... done"
+        psed "/<\!--BLOG-->/r $DRAFTDIR/$blogpost.final-rssentry" "$RSSFILE" || echo "RSS... done"
+        rmlastentry || echo "Removing last entry from index file... done"
+        rmcontents "$DRAFTDIR" && echo "Cleaning up $DRAFTDIR... done"
+        echo "Published $blogpost."
 }
 
-missing_check() {
-        missing=false
-        [ -f "$TEMPLATE" ]  || err $TEMPLATE
-        [ -f "$INDEX" ]     || err $INDEX
-        [ -f "$RSSFILE" ]   || err $RSSFILE
-        [ -f "$BLOGINDEX" ] || err $BLOGINDEX
-        [ "$missing" = "true" ] && exit
-
-        [ ! -d "$BLOGDIR" ] &&
-                confirm_action "Blog directory doesn't exist. Intialize it here (y/n)? " "y" &&
-                mkdir -pv $BLOGDIR
+rsscreate() {
+        printf "<!--BEGIN %s-->\n" "$blogpost"
+        printf "<item>"
+        printf "\t<title>%s</title>\n" "$title"
+        printf "\t<guid>%s</guid>\n" "$WEBSITE/$BLOGDIR/$blogpost.html"
+        printf "\t<pubDate>%s</pubDate>\n" "$(date '+%a, %d %b %Y')" 
+        printf "\t<description>\n"
+        printf "%s\n" "$(cat "$DRAFTDIR/$blogpost.xml")"
+        printf "\t</description>\n"
+        printf "</item>\n"
+        printf "<!--END %s-->\n" "$blogpost"
 }
 
 usage() {
-        printf "Usage: sbrs [OPTION]\n\n"
+        printf "Usage: ${0##*/} [OPTION]\n\n"
         printf "Options:\n"
         printf "  -n\t\tNew post\n"
         printf "  -p\t\tPublish draft post\n"

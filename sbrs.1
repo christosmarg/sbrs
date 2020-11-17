@@ -23,25 +23,47 @@ generates a blog post page and RSS feed.
 The options are as follows:
 .Bl -tag -width Ds
 .It Fl n Ar new post
-Prompt the user to write a new blog post in HTML
+Prompt the user to write a new blog post in HTML.
+.Nm
+will open the editor set in the 'EDITOR' environmental variable. In case
+it is not set, it will set 'EDITOR'
+.Xr Vim 1
 .It Fl p Ar publish draft
-Publish one of the posts stored in the .drafts directory. 
+Publish one of the posts stored in the '.drafts' directory. After a post
+has been published, it will be deleted from '.drafts' along with all the
+files related to it and will be moved to 'blog'. This option also automatically
+creates an RSS feed for the post.
 .It Fl e Ar edit draft
-Edit one of the posts stored in the .drafts directory.
+Edit one of the posts stored in the '.drafts' directory.
 .It Fl v Ar view draft
-View one of the posts stored in the .drafts directory.
+View one of the posts stored in the '.drafts' directory.
+.Nm
+creates a temporary file that looks like the finished post, but is deleted
+after
+.Nm
+has exited. The 'BROWSER' environmental variable has to be set
+in order for this option to work.
 .It Fl t Ar delete draft
-Delete one of the posts stored in the .drafts directory.
+Delete one of the posts stored in the '.drafts' directory.
 .It Fl r Ar revise published
-Revise a published post stored in the blog directory.
+Revise a published post stored in the 'blog' directory. After you're done
+revising you don't need to re-publish the post again, since
+.Nm
+edits the post directly.
 .It Fl c Ar change title
-Change a published post's title.
+Change a published post's title. This option will replace every instance
+of the old title with the new one both. The filename will also
+be changed.
 .It Fl o Ar view published
-View a published post stored in the blog directory on your default browser.
+View a published post stored in the 'blog' directory on your default browser.
+Same with the -v option; the 'BROWSER' environmental variable has to be set
+in order for this option to work.
 .It Fl d Ar delete published
-Delete a published post stored in the blog directory.
+Delete a published post stored in the 'blog' directory. This option will delete
+the post from the blog's index file, the RSS feed, as well as the main page in
+case it is found there too.
 .It Fl l Ar list all published
-List all posts stored in the blog directory.
+List all posts stored in the 'blog' directory.
 .El
 .Pp
 Only one option at a time can be used.

@@ -8,8 +8,8 @@ Inside the 'sbrs' script, change the 'WEBSITE' and 'AUTHOR' variables
 to match your website's URL and your name.
 
 In case you don't edit the script further, the structure of your
-website's directory should look like this. The
-files below need to exist with the same names.
+website's directory should look like this. The files below need
+to exist with the same names.
 
         ├── blog
         |   └── here reside your blog posts
