@@ -14,12 +14,12 @@ to exist with the same names.
         ├── blog
         |   └── here reside your blog posts
         ├── index.html
-        ├── blogindex.html
+        ├── blog.html
         ├── template.html
         └── rss.xml
 
-Inside 'index.html', 'blogindex.html' and 'rss.xml' sbrs will search for
-<!--BLOG--> in order to put the blog post listings and RSS feed below it.
+Inside 'index.html', 'blog.html' and 'rss.xml' sbrs will search for
+<!--SBRS--> in order to put the blog post listings and RSS feed below it.
 
 The 'template.html' file is how you want your blog post's page to look like.
 See my own 'template.html' for more. The 'TITLE', 'HEADER' and 'AUTHOR'

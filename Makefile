@@ -21,7 +21,7 @@ all: ${BIN}
 
 dist:
 	${MKDIR} ${DIST}
-	${CP} -R ${BIN} ${MAN1} blogindex.html index.html LICENSE Makefile\
+	${CP} -R ${BIN} ${MAN1} blog.html index.html LICENSE Makefile\
 		README.md rss.xml styles.css template.html ${DIST}
 	${TAR} ${DIST}.tar ${DIST}
 	${GZIP} ${DIST}.tar

@@ -5,7 +5,7 @@ WEBSITE="https://christosmarg.xyz"
 AUTHOR="Christos Margiolis"
 BLOGDIR="blog"
 DRAFTDIR=".drafts"
-BLOGINDEX="blogindex.html"
+BLOGINDEX="blog.html"
 INDEX="index.html"
 RSSFILE="rss.xml"
 TEMPLATE="template.html"
@@ -23,17 +23,16 @@ main() {
         fi
 
         case ${1} in
-                -n*) newpost ;;
-                -p*) listposts "${DRAFTDIR}" && publish ;;
-                -e*) listposts "${DRAFTDIR}" && ${EDITOR} "${DRAFTDIR}/${blogpost}.html" ;;
-                -v*) listposts "${DRAFTDIR}" && view ;;
-                -t*) listposts "${DRAFTDIR}" && delete "${DRAFTDIR}" ;;
-                # edit rss too
-                -r*) listposts "${BLOGDIR}"  && ${EDITOR} "${BLOGDIR}/${blogpost}.html" ;;
-                -c*) listposts "${BLOGDIR}"  && titlechange ;;
-                -o*) listposts "${BLOGDIR}"  && ${BROWSER} "${BLOGDIR}/${blogpost}.html" ;;
-                -d*) listposts "${BLOGDIR}"  && delete "${BLOGDIR}" ;;
-                -l*) listposts "${BLOGDIR}" ;;
+                -n) newpost ;;
+                -p) listposts "${DRAFTDIR}" && publish ;;
+                -e) listposts "${DRAFTDIR}" && ${EDITOR} "${DRAFTDIR}/${blogpost}.html" ;;
+                -v) listposts "${DRAFTDIR}" && view ;;
+                -t) listposts "${DRAFTDIR}" && delete "${DRAFTDIR}" ;;
+                #-r) listposts "${BLOGDIR}"  && revise ;;
+                -c) listposts "${BLOGDIR}"  && titlechange ;;
+                -o) listposts "${BLOGDIR}"  && ${BROWSER} "${BLOGDIR}/${blogpost}.html" ;;
+                -d) listposts "${BLOGDIR}"  && delete "${BLOGDIR}" ;;
+                -l) listposts "${BLOGDIR}" ;;
                 *) usage ;;
         esac
 }
@@ -42,12 +41,25 @@ err() {
         echo "${0##*/}: $@" && exit
 }
 
+# We could be using `read -erp` but the -e and -p options don't work
+# or exist in all shells (e.g OpenBSD's `/bin/sh`).
+xread() {
+        printf "%s" "${1}" && read -r ${2}
+}
+
+# This is a POSIX compliant version of `sed -i` since non-GNU
+# implementations require a backup file with the -i option.
+# In this case, we make the backup files and immidiately delete
+# them afterwards because we probably don't need them.
+# We're using the extension `.psedbak` since we want to delete
+# only the files affected by `psed` and nothing else, and that's
+# an easy way to make sure.
 psed() {
-        sed -i.orig "$@" && rm *.orig "${BLOGDIR}/*.orig" 2> /dev/null
+        sed -i.psedbak "$@" && rm *.psedbak ${BLOGDIR}/*.psedbak 2>/dev/null
 }
 
 confirmact() {
-        read -erp "${1}" act && test "${act}" = "${2}" || exit
+        xread "${1}" act && test "${act}" = "${2}" || exit 1
 }
 
 list() {
@@ -55,32 +67,7 @@ list() {
         awk -F/ '{print $NF}'
 }
 
-listposts() {
-        printf "Listing posts in: %s (total: %d)\n" "${1}" "$(list "${1}" | wc -l)"
-        list "${1}" | nl
-        nposts=$(expr $(list "${1}" | wc -l))
-        test ${nposts} -eq 0 && err "no posts available in: ${1}"
-        read -erp "Choose a post to by number: " num
-        if ! test -z "$(echo ${num} | grep -E "^[0-9]+$" | grep -v "^0")"; then
-                test $(expr ${num}) -gt ${nposts} && err "no post selected"
-                blogpost=$(list "${1}" | nl | grep -w "${num}" | awk '{print $2}')
-                blogpost=${blogpost%.*}
-        else
-                err "no post selected"
-        fi
-}
-
-newpost() {
-        mkdir -p "${DRAFTDIR}"
-        read -erp "Title: " title
-        test -z "${title}" && err "please specify a title"
-        blogpost=$(titlefmt "${title}")
-        test -f "${BLOGDIR}/${blogpost}.html" && err "file exists already"
-        $EDITOR "${DRAFTDIR}/${blogpost}.html"
-        sed "s/TITLE/${title}/g;s/HEADER/${title}/g;s/AUTHOR/${AUTHOR}/g;" "${TEMPLATE}" \
-        > "${DRAFTDIR}/${blogpost}.final.html"
-}
-
+# Create a proper file name for the post (e.g Hello world! -> hello-world).
 titlefmt() {
         echo "${1}" | iconv -cf UTF-8 -t ASCII//TRANSLIT |
         tr -d '[:punct:]' | tr '[:upper:]' '[:lower:]' | tr ' ' '-'
@@ -90,84 +77,155 @@ titleget() {
         grep "<title>" "${1}" | sed "s/<title>//;s/<\/title>//;s/ *//;"
 }
 
-titlechange() {
-        read -erp "Give post a new title: " newtitle
-        confirmact "Are you sure (y/N)? " "y"
-        oldtitle=$(titleget "${BLOGDIR}/${blogpost}.html")
-        newtitlefmt=$(titlefmt "${newtitle}")
-        test -f "${BLOGDIR}/${newtitle}fmt.html" && err "file exists already"
-
-        psed "s/${blogpost}/${newtitle}fmt/g;s/${oldtitle}/${newtitle}/g" \
-        "${BLOGDIR}/${blogpost}.html" "${INDEX}" "${BLOGINDEX}" "${RSSFILE}" &&
-        mv "${BLOGDIR}/${blogpost}.html" "${BLOGDIR}/${newtitle}fmt.html" &&
-        echo "Title changed successfully: ${oldtitle} -> ${newtitle}"
+titlecheck() {
+        # XXX: maybe should not have `BLOGDIR` hardcoded
+        test -f "${BLOGDIR}/${1}.html" && err "file exists already"
+        test -z "${1}" && err "empty title"
 }
 
 rmcontents() {
-        # replace with find(1)
         ls "${1}" | grep -x "${blogpost}\...*" | sed "s/^/${1}\//" | xargs rm
 }
 
-rmlastentry() {
-        indexentries=$(sed "1,/<\!--BLOG-->/d" "${INDEX}" | grep "<li>")
+# -l option
+listposts() {
+        dir="${1}"
+        nposts=$(expr $(list "${dir}" | wc -l))
+
+        test ${nposts} -eq 0 && err "no posts available in: ${dir}"
+        printf "Listing posts in: %s (total: %d)\n" "${dir}" "${nposts}"
+        list "${dir}" | nl
+
+        xread "Choose a post to by number: " num
+
+        if ! test -z "$(echo ${num} | grep -E "^[0-9]+$" | grep -v "^0")"; then
+                test $(expr ${num}) -gt ${nposts} && err "no post selected"
+                blogpost=$(list "${dir}" | nl | grep -w "${num}" | awk '{print $2}')
+                blogpost=${blogpost%.*}
+        else
+                err "no post selected"
+        fi
+}
+
+# -n options
+newpost() {
+        mkdir -p "${DRAFTDIR}"
+        xread "Title: " title
+        test -z "${title}" && err "please specify a title"
+
+        blogpost=$(titlefmt "${title}")
+        titlecheck ${blogpost}
+        $EDITOR "${DRAFTDIR}/${blogpost}.html"
+
+        sed "s/TITLE/${title}/g;s/HEADER/${title}/g;s/AUTHOR/${AUTHOR}/g;" "${TEMPLATE}" \
+        > "${DRAFTDIR}/${blogpost}.final.html"
+}
+
+# -c option
+titlechange() {
+        xread "New title: " newtitle
+        confirmact "Are you sure (y/N)? " "y"
+
+        oldtitle=$(titleget "${BLOGDIR}/${blogpost}.html")
+        newtitlefmt=$(titlefmt "${newtitle}")
+        titlecheck ${newtitlefmt}
+
+        # Adding `.html` so that it doesn't edit every single
+        # instance of the title, because in case the title is
+        # something very generic like 'and', it'll change every
+        # single instance of `and` in the file, and we don't want that. :-)
+        # The < and > serve the same purpose, as `oldtitle` is
+        # probably going to be inside an <a> or <title> tag.
+        psed "s/${blogpost}.html/${newtitlefmt}.html/g;s/>${oldtitle}</>${newtitle}</g" \
+        "${BLOGDIR}/${blogpost}.html" "${INDEX}" "${BLOGINDEX}" "${RSSFILE}" &&
+        mv "${BLOGDIR}/${blogpost}.html" "${BLOGDIR}/${newtitlefmt}.html" &&
+        echo "Title changed successfully: ${oldtitle} -> ${newtitle}"
+}
+
+# -v option
+view() {
+        cat "${DRAFTDIR}/${blogpost}.final.html" > "${DRAFTDIR}/${blogpost}.final-view.html"
+        psed "/<\!--SBRS-->/r ${DRAFTDIR}/${blogpost}.html" "${DRAFTDIR}/${blogpost}.final-view.html"
+        ${BROWSER} "${DRAFTDIR}/${blogpost}.final-view.html"
+}
+
+# -d and -t options
+delete() {
+        dir="${1}"
+
+        confirmact "Are you sure you want to delete \"${blogpost}\" (y/N)? " "y"
+        if test "${dir}" = "${BLOGDIR}"; then
+                psed "/${blogpost}/d" "${INDEX}" "${BLOGINDEX}"
+                psed "/<\!--BEGIN ${blogpost}-->/,/<\!--END ${blogpost}-->/d" "${RSSFILE}"
+        fi
+        rmcontents "${dir}" && echo "Removed ${blogpost}."
+}
+
+# -p option
+# XXX: needs a good cleanup
+publish() {
+        confirmact "Publish post (y/N)? " "y"
+        title=$(titleget "${DRAFTDIR}/${blogpost}.final.html")
+
+        # Make the final HTML file.
+        psed "s/^/\ \ \ \ \ \ \ \ /" "${DRAFTDIR}/${blogpost}.html"
+        psed "/<\!--SBRS-->/r ${DRAFTDIR}/${blogpost}.html" "${DRAFTDIR}/${blogpost}.final.html"
+
+        # Convert HTML tags to XML format. We're also wrapping all <pre> tags
+        # in a CDATA block so that RSS readers can render it properly.
+        sed "s/</\&lt;/g;s/>/\&gt;/g;s/\&lt;pre\&gt;/\&lt;pre\&gt;<\![CDATA[/g;s/\&lt;\/pre\&gt;/]]>\&lt;\/pre\&gt;/g" \
+        "${DRAFTDIR}/${blogpost}.html" > "${DRAFTDIR}/${blogpost}.xml"
+
+        cp "${DRAFTDIR}/${blogpost}.final.html" "${BLOGDIR}/${blogpost}.html"
+
+        # Prepare the blog entry for the index files.
+        printf "\t\t<li>%s &ndash; <a href=\"%s\">%s</a></li>\n" \
+        "$(date '+%Y %b %d')" "${BLOGDIR}/${blogpost}.html" "${title}" |
+        expand -t8 > "${DRAFTDIR}/${blogpost}.final-htmlentry"
+
+        # Prepare the RSS entry.
+        rsscreate | expand -t8 > "${DRAFTDIR}/${blogpost}.final-rssentry"
+
+        # Update blog index to include the new post.
+        # In case there is not section for the current month, create that too.
+        dateid=$(date '+%b %Y' | sed 's/\ //' | tr '[:upper:]' '[:lower:]')
+
+        if test -z "$(grep "${dateid}" "${BLOGINDEX}")"; then
+                datename=$(date '+%B %Y')
+                psed "/<\!--SBRS-->/a\\
+\        <h2 id=\\"${dateid}\\">${datename}<\\/h2> \\
+\        <ul> \\
+\                <\\!--SBRS ${datename}--> \\
+\        <\\/ul> \\
+" "${BLOGINDEX}"
+        fi
+
+        # Using || because of `psed`.
+        psed "/<\!--SBRS $(date '+%B %Y')-->/r ${DRAFTDIR}/${blogpost}.final-htmlentry" \
+        "${BLOGINDEX}" || echo "Blogindex... done."
+
+        psed "/<\!--SBRS-->/r ${DRAFTDIR}/${blogpost}.final-htmlentry" "${INDEX}" || echo "Index... done"
+        psed "/<\!--SBRS-->/r ${DRAFTDIR}/${blogpost}.final-rssentry" "${RSSFILE}" || echo "RSS... done"
+        
+        # Remove the last blog entry from `index.html`.
+        # Get only what's inside <!--SBRS--> and </ul>. Will not work on anything except
+        # my setup. FIXME
+        indexentries=$(sed '1,/<\!--SBRS-->/d;/<\/ul>/,$d' "${INDEX}" | grep "<li>")
+
         if test $(expr $(echo "${indexentries}" | wc -l)) -gt 7; then
                 lastentry=$(echo "${indexentries}" | tail -2 | head -1) &&
                 psed "s|${lastentry}||;" "${INDEX}"
         fi
-}
-
-blogindexupdate() {
-        dateid=$(date '+%b %Y' | sed 's/\ //' | tr '[:upper:]' '[:lower:]')
-        if test -z "$(grep "${dateid}" "${BLOGINDEX}")"; then
-                datename=$(date '+%B %Y')
-                psed "/<\!--BLOG-->/a\\
-\        <h2 id=\\"${dateid}\\">${datename}<\\/h2> \\
-\        <ul> \\
-\                <\\!--BLOG ${datename}--> \\
-\        <\\/ul> \\
-" "${BLOGINDEX}"
-        fi
-}
-
-view() {
-        cat "${DRAFTDIR}/${blogpost}.final.html" > "${DRAFTDIR}/${blogpost}.final-view.html"
-        psed "/<\!--BLOG-->/r ${DRAFTDIR}/${blogpost}.html" "${DRAFTDIR}/${blogpost}.final-view.html"
-        ${BROWSER} "${DRAFTDIR}/${blogpost}.final-view.html"
-}
-
-delete() {
-        confirmact "Are you sure you want to delete \"${blogpost}\" (y/N)? " "y"
-        if test "${1}" = "${BLOGDIR}"; then
-                psed "/${blogpost}/d" "${INDEX}" "${BLOGINDEX}"
-                psed "/<\!--BEGIN ${blogpost}-->/,/<\!--END ${blogpost}-->/d" "${RSSFILE}"
-        fi
-        rmcontents "${1}" && echo "Removed ${blogpost}."
-}
-
-publish() {
-        confirmact "Publish post (y/N)? " "y"
-        title=$(titleget "${DRAFTDIR}/${blogpost}.final.html")
-        # bad?
-        psed "s/^/\ \ \ \ \ \ \ \ /" "${DRAFTDIR}/${blogpost}.html"
-        psed "/<\!--BLOG-->/r ${DRAFTDIR}/${blogpost}.html" "${DRAFTDIR}/${blogpost}.final.html"
-        sed "s/</\&lt;/g;s/>/\&gt;/g;" "${DRAFTDIR}/${blogpost}.html" > "${DRAFTDIR}/${blogpost}.xml"
-        cp "${DRAFTDIR}/${blogpost}.final.html" "${BLOGDIR}/${blogpost}.html"
-
-        printf "\t\t<li>%s &ndash; <a href=\"%s\">%s</a></li>\n" \
-        "$(date '+%Y %b %d')" "${BLOGDIR}/${blogpost}.html" "${title}" |
-        expand -t8 > "${DRAFTDIR}/${blogpost}.final-htmlentry"
-        rsscreate | expand -t8 > "${DRAFTDIR}/${blogpost}.final-rssentry"
-
-        # using || because of psed
-        blogindexupdate
-        psed "/<\!--BLOG $(date '+%B %Y')-->/r ${DRAFTDIR}/${blogpost}.final-htmlentry" \
-        "${BLOGINDEX}" || echo "Blogindex... done."
-        psed "/<\!--BLOG-->/r ${DRAFTDIR}/${blogpost}.final-htmlentry" "${INDEX}" || echo "Index... done"
-        psed "/<\!--BLOG-->/r ${DRAFTDIR}/${blogpost}.final-rssentry" "${RSSFILE}" || echo "RSS... done"
-        rmlastentry || echo "Removing last entry from index file... done"
+        
         rmcontents "${DRAFTDIR}" && echo "Cleaning up ${DRAFTDIR}... done"
         echo "Published ${blogpost}."
 }
+
+# -r option
+#revise() {
+        #${EDITOR} "${BLOGDIR}/${blogpost}.html"
+        #psed "/<\!--BEGIN ${blogpost}-->/,/<\!--END ${blogpost}-->/d" "${RSSFILE}"
+#}
 
 rsscreate() {
         printf "<!--BEGIN %s-->\n" "${blogpost}"
@@ -183,18 +241,20 @@ rsscreate() {
 }
 
 usage() {
-        printf "Usage: ${0##*/} OPTION\n\n"
-        printf "options:\n"
-        printf "  -n\tnew post\n"
-        printf "  -p\tpublish draft post\n"
-        printf "  -e\tedit draft post\n"
-        printf "  -v\tview draft post in browser\n"
-        printf "  -t\tdelete draft post\n"
-        printf "  -r\trevise published post\n"
-        printf "  -c\tchange title\n"
-        printf "  -o\tview published post in browser\n"
-        printf "  -d\tdelete published post\n"
-        printf "  -l\tlist all published posts\n"
+        printf "usage: ${0##*/} {-n | -p | -e | -v | -t | -r | -c | -o | -d | -l}\n\n" 1>&2
+        printf "options:\n" 1>&2
+        printf "  -n\tnew post\n" 1>&2
+        printf "  -p\tpublish draft post\n" 1>&2
+        printf "  -e\tedit draft post\n" 1>&2
+        printf "  -v\tview draft post in browser\n" 1>&2
+        printf "  -t\tdelete draft post\n" 1>&2
+        printf "  -r\trevise published post\n" 1>&2
+        printf "  -c\tchange title\n" 1>&2
+        printf "  -o\tview published post in browser\n" 1>&2
+        printf "  -d\tdelete published post\n" 1>&2
+        printf "  -l\tlist all published posts\n" 1>&2
+        
+        exit 1
 }
 
 main "${1}"

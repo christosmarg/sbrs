@@ -6,36 +6,37 @@
 .Nd simple blog and RSS system
 .Sh SYNOPSIS
 .Nm
-.Op Fl n Ar new post
-.Op Fl p Ar publish draft
-.Op Fl e Ar edit draft
-.Op Fl v Ar view draft
-.Op Fl t Ar delete draft
-.Op Fl r Ar revise published
-.Op Fl c Ar change title
-.Op Fl o Ar view published
-.Op Fl d Ar delete published
-.Op Fl l Ar list all published
+.Bro
+.Fl n |
+.Fl p |
+.Fl e |
+.Fl v |
+.Fl t |
+.Fl r |
+.Fl c |
+.Fl o |
+.Fl d |
+.Fl l
 .Sh DESCRIPTION
 .Nm
 generates a blog post page and RSS feed.
 .Sh OPTIONS
 The options are as follows:
 .Bl -tag -width Ds
-.It Fl n Ar new post
+.It Fl n
 Prompt the user to write a new blog post in HTML.
 .Nm
 will open the editor set in the 'EDITOR' environmental variable. In case
 it is not set, it will set 'EDITOR'
 .Xr Vim 1
-.It Fl p Ar publish draft
+.It Fl p
 Publish one of the posts stored in the '.drafts' directory. After a post
 has been published, it will be deleted from '.drafts' along with all the
 files related to it and will be moved to 'blog'. This option also automatically
 creates an RSS feed for the post.
-.It Fl e Ar edit draft
+.It Fl e
 Edit one of the posts stored in the '.drafts' directory.
-.It Fl v Ar view draft
+.It Fl v
 View one of the posts stored in the '.drafts' directory.
 .Nm
 creates a temporary file that looks like the finished post, but is deleted
@@ -43,26 +44,26 @@ after
 .Nm
 has exited. The 'BROWSER' environmental variable has to be set
 in order for this option to work.
-.It Fl t Ar delete draft
+.It Fl t
 Delete one of the posts stored in the '.drafts' directory.
-.It Fl r Ar revise published
+.It Fl r
 Revise a published post stored in the 'blog' directory. After you're done
 revising you don't need to re-publish the post again, since
 .Nm
 edits the post directly.
-.It Fl c Ar change title
+.It Fl c
 Change a published post's title. This option will replace every instance
 of the old title with the new one both. The filename will also
 be changed.
-.It Fl o Ar view published
+.It Fl o
 View a published post stored in the 'blog' directory on your default browser.
 Same with the -v option; the 'BROWSER' environmental variable has to be set
 in order for this option to work.
-.It Fl d Ar delete published
+.It Fl d
 Delete a published post stored in the 'blog' directory. This option will delete
 the post from the blog's index file, the RSS feed, as well as the main page in
 case it is found there too.
-.It Fl l Ar list all published
+.It Fl l
 List all posts stored in the 'blog' directory.
 .El
 .Pp
@@ -81,14 +82,14 @@ names.
         ├── blog
         |   └── here reside your blog posts
         ├── index.html
-        ├── blogindex.html
+        ├── blog.html
         ├── template.html
         └── rss.xml
 .Pp
-Inside 'index.html', 'blogindex.html' and 'rss.xml'
+Inside 'index.html', 'blog.html' and 'rss.xml'
 .Nm
 will search for
-<!--BLOG--> in order to put the blog post listings and RSS feed below it.
+<!--SBRS--> in order to put the blog post listings and RSS feed below it.
 .Pp
 The 'template.html' file is how you want your blog post's page to look like.
 See my own 'template.html' for more. The 'TITLE', 'HEADER' and 'AUTHOR'
