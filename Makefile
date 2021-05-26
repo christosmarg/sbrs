@@ -1,45 +1,38 @@
 # See LICENSE file for copyright and license details.
+# sbrs - simple blog and rss system
 .POSIX:
 
-BIN = sbrs
+SH = sbrs
 VERSION = 0.1
-DIST = ${BIN}-${VERSION}
-MAN1 = ${BIN}.1
+DIST = ${SH}-${VERSION}
+MAN1 = ${SH}.1
 PREFIX = /usr/local
-MAN_DIR = ${PREFIX}/man/man1
-BIN_DIR = ${PREFIX}/bin
+MANPREFIX = ${PREFIX}/share/man
 
-CP = cp -f
-RM = rm -f
-RM_DIR = rm -rf
-MKDIR = mkdir -p
-TAR = tar -cf
-GZIP = gzip
-
-all: ${BIN}
-	chmod +x ${BIN}
+all: ${SH}
+	chmod +x ${SH}
 
 dist:
-	${MKDIR} ${DIST}
-	${CP} -R ${BIN} ${MAN1} blog.html index.html LICENSE Makefile\
-		README.md rss.xml styles.css template.html ${DIST}
-	${TAR} ${DIST}.tar ${DIST}
-	${GZIP} ${DIST}.tar
-	${RM_DIR} ${DIST}
+	mkdir -p ${DIST}
+	cp -R articles.html index.html LICENSE Makefile rss.xml \
+	       sbrs sbrs.1 styles.css template.html ${DIST}
+	tar -cf ${DIST}.tar ${DIST}
+	gzip ${DIST}.tar
+	rm -rf ${DIST}
 
 install: all
-	${MKDIR} ${DESTDIR}${BIN_DIR} ${DESTDIR}${MAN_DIR}
-	${CP} ${BIN} ${DESTDIR}${BIN_DIR}
-	${CP} ${MAN1} ${DESTDIR}${MAN_DIR}
-	sed "s/VERSION/${VERSION}/g" < ${MAN1} > ${DESTDIR}${MAN_DIR}/${MAN1}
-	chmod 755 ${DESTDIR}${BIN_DIR}/${BIN}
-	chmod 644 ${DESTDIR}${MAN_DIR}/${MAN1}
+	mkdir -p ${DESTDIR}${PREFIX}/bin ${DESTDIR}${MANPREFIX}/man1
+	cp -f ${SH} ${DESTDIR}${PREFIX}/bin
+	cp -f ${MAN1} ${DESTDIR}${MANPREFIX}/man1
+	sed "s/VERSION/${VERSION}/g" < ${MAN1} > ${DESTDIR}${MANPREFIX}/man1/${MAN1}
+	chmod 755 ${DESTDIR}${PREFIX}/bin/${SH}
+	chmod 644 ${DESTDIR}${MANPREFIX}/man1/${MAN1}
 
-uninstall: all
-	${RM} ${DESTDIR}${BIN_DIR}/${BIN}
-	${RM} ${DESTDIR}${MAN_DIR}/${MAN1}
+uninstall:
+	rm -f ${DESTDIR}${PREFIX}/bin/${SH} \
+		${DESTDIR}${MANPREFIX}/man1/${MAN1}
 
 clean:
-	${RM} ${DIST}.tar.gz
+	rm -f ${DIST}.tar.gz
 
 .PHONY: all clean dist install uninstall
