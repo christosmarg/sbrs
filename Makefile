@@ -8,6 +8,8 @@ DIST = ${SH}-${VERSION}
 MAN1 = ${SH}.1
 PREFIX = /usr/local
 MANPREFIX = ${PREFIX}/share/man
+# OpenBSD
+#MANPREFIX = ${PREFIX}/man
 
 all: ${SH}
 	chmod +x ${SH}

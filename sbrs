@@ -5,17 +5,18 @@ WEBSITE="https://margiolis.net"
 AUTHOR="Christos Margiolis"
 BLOGDIR="articles"
 DRAFTDIR=".drafts"
-BLOGINDEX="articles/index.html"
 INDEX="index.html"
 RSSFILE="rss.xml"
 TEMPLATE="template.html"
-test -z "${EDITOR}" && EDITOR="vim"
+DATEFMT="+%Y.%m.%d"
+test -z "${EDITOR}" && EDITOR="vi"
 
-main() {
+main()
+{
         test -f "${TEMPLATE}"   || err "${TEMPLATE}: missing file"
-        test -f "${BLOGINDEX}"  || err "${BLOGINDEX}: missing file"
         test -f "${INDEX}"      || err "${INDEX}: missing file"
         test -f "${RSSFILE}"    || err "${RSSFILE}: missing file"
+	test ${f_exit} && exit 1
 
         if ! test -d "${BLOGDIR}"; then
                 confirmact "Blog directory doesn't exist. Intialize it here (y/n)? " "y"
@@ -38,13 +39,16 @@ main() {
         esac
 }
 
-err() {
-        echo "${0##*/}: $@" && exit
+err()
+{
+	f_exit=true
+        echo "${0##*/}: $@" 1>&2
 }
 
 # Could just use `read -erp` but the -e and -p options don't work
 # or exist in all shells (e.g OpenBSD's ksh).
-xread() {
+xread()
+{
         printf "%s" "${1}" && read -r ${2}
 }
 
@@ -55,42 +59,50 @@ xread() {
 # We're using the extension `.sedibak` since we want to delete
 # only the files affected by `sedi` and nothing else, and that's
 # an easy way to make sure.
-sedi() {
+sedi()
+{
         sed -i.sedibak "$@" && rm *.sedibak ${BLOGDIR}/*.sedibak 2>/dev/null
 }
 
-confirmact() {
+confirmact()
+{
         xread "${1}" act && test "${act}" = "${2}" || exit 1
 }
 
 # TODO: sort by date
-list() {
+list()
+{
         find "${1}" -type f -name '*\.html' ! -name '*\.final*' 2>/dev/null |
         awk -F/ '{print $NF}'
 }
 
 # Create a proper file name for the post (e.g Hello world! -> hello-world).
-titlefmt() {
+titlefmt()
+{
         echo "${1}" | iconv -cf UTF-8 -t ASCII//TRANSLIT |
         tr -d '[:punct:]' | tr '[:upper:]' '[:lower:]' | tr ' ' '-'
 }
 
-titleget() {
+titleget()
+{
         grep "<title>" "${1}" | sed "s/<title>//;s/<\/title>//;s/ *//;"
 }
 
-titlecheck() {
+titlecheck()
+{
         # XXX: maybe should not have `BLOGDIR` hardcoded
         test -f "${BLOGDIR}/${1}.html" && err "file exists already"
         test -z "${1}" && err "empty title"
 }
 
-rmcontents() {
+rmcontents()
+{
         ls "${1}" | grep -x "${blogpost}\...*" | sed "s/^/${1}\//" | xargs -r rm
 }
 
 # -l option
-listposts() {
+listposts()
+{
         dir="${1}"
         nposts=$(expr $(list "${dir}" | wc -l))
 
@@ -110,7 +122,8 @@ listposts() {
 }
 
 # -n option
-newpost() {
+newpost()
+{
         mkdir -p "${DRAFTDIR}"
         xread "Title: " title
         test -z "${title}" && err "please specify a title"
@@ -124,7 +137,9 @@ newpost() {
 }
 
 # -c option
-titlechange() {
+# TODO: replace ALL files
+titlechange()
+{
         xread "New title: " newtitle
         confirmact "Are you sure (y/N)? " "y"
 
@@ -139,25 +154,27 @@ titlechange() {
         # The < and > serve the same purpose, as `oldtitle` is
         # probably going to be inside an <a> or <title> tag.
         sedi "s/${blogpost}.html/${newtitlefmt}.html/g;s/>${oldtitle}</>${newtitle}</g" \
-        "${BLOGDIR}/${blogpost}.html" "${INDEX}" "${BLOGINDEX}" "${RSSFILE}" &&
+        "${BLOGDIR}/${blogpost}.html" "${INDEX}" "${RSSFILE}" &&
         mv "${BLOGDIR}/${blogpost}.html" "${BLOGDIR}/${newtitlefmt}.html" &&
         echo "Title changed successfully: ${oldtitle} -> ${newtitle}"
 }
 
 # -v option
-view() {
+view()
+{
         cat "${DRAFTDIR}/${blogpost}.final.html" > "${DRAFTDIR}/${blogpost}.final-view.html"
         sedi "/<\!--SBRS-->/r ${DRAFTDIR}/${blogpost}.html" "${DRAFTDIR}/${blogpost}.final-view.html"
         ${BROWSER} "${DRAFTDIR}/${blogpost}.final-view.html"
 }
 
 # -d and -t options
-delete() {
+delete()
+{
         dir="${1}"
 
         confirmact "Are you sure you want to delete \"${blogpost}\" (y/N)? " "y"
         if test "${dir}" = "${BLOGDIR}"; then
-                sedi "/${blogpost}/d" "${INDEX}" "${BLOGINDEX}"
+                sedi "/${blogpost}/d" "${INDEX}"
                 sedi "/<\!--BEGIN ${blogpost}-->/,/<\!--END ${blogpost}-->/d" "${RSSFILE}"
         fi
         rmcontents "${dir}" && echo "Removed ${blogpost}."
@@ -165,12 +182,12 @@ delete() {
 
 # -p option
 # XXX: needs a good cleanup
-publish() {
+publish()
+{
         confirmact "Publish post (y/N)? " "y"
         title=$(titleget "${DRAFTDIR}/${blogpost}.final.html")
 
         # Make the final HTML file.
-        sedi "s/^/\ \ \ \ \ \ \ \ /" "${DRAFTDIR}/${blogpost}.html"
         sedi "/<\!--SBRS-->/r ${DRAFTDIR}/${blogpost}.html" "${DRAFTDIR}/${blogpost}.final.html"
 
         # Convert HTML tags to XML format. We're also wrapping all <pre> tags
@@ -181,52 +198,44 @@ publish() {
         cp "${DRAFTDIR}/${blogpost}.final.html" "${BLOGDIR}/${blogpost}.html"
 
         # Prepare the blog entry for the index files.
-        printf "\t\t<li>%s &ndash; <a href=\"%s\">%s</a></li>\n" \
-        "$(date '+%Y %b %d')" "${BLOGDIR}/${blogpost}.html" "${title}" |
+        printf "\t%s <a href=\"%s\">%s</a><br>\n" \
+        "$(date ${DATEFMT})" "${BLOGDIR}/${blogpost}.html" "${title}" |
         expand -t8 > "${DRAFTDIR}/${blogpost}.final-htmlentry"
 
         # Prepare the RSS entry.
         rsscreate | expand -t8 > "${DRAFTDIR}/${blogpost}.final-rssentry"
 
         # Using || because of `sedi`.
-        sedi "/<\!--SBRS-->/r ${DRAFTDIR}/${blogpost}.final-htmlentry" "${BLOGINDEX}" || echo "blogindex: ok"
         sedi "/<\!--SBRS-->/r ${DRAFTDIR}/${blogpost}.final-htmlentry" "${INDEX}" || echo "index: ok"
         sedi "/<\!--SBRS-->/r ${DRAFTDIR}/${blogpost}.final-rssentry" "${RSSFILE}" || echo "rss: ok"
-        
-        # Remove the last blog entry from `index.html`.
-        # Get only what's inside <!--SBRS--> and </ul>. Will not work on anything except
-        # my setup. FIXME
-        indexentries=$(sed '1,/<\!--SBRS-->/d;/<\/ul>/,$d' "${INDEX}" | grep "<li>")
-
-        if test $(expr $(echo "${indexentries}" | wc -l)) -gt 7; then
-                lastentry=$(echo "${indexentries}" | tail -2 | head -1) &&
-                sedi "s|${lastentry}||;" "${INDEX}"
-        fi
         
         rmcontents "${DRAFTDIR}" && echo "clean up ${DRAFTDIR}: ok"
         echo "Published ${blogpost}."
 }
 
 # -r option
-#revise() {
+#revise()
+#{
         #${EDITOR} "${BLOGDIR}/${blogpost}.html"
         #sedi "/<\!--BEGIN ${blogpost}-->/,/<\!--END ${blogpost}-->/d" "${RSSFILE}"
 #}
 
-rsscreate() {
+rsscreate()
+{
         printf "<!--BEGIN %s-->\n" "${blogpost}"
         printf "<item>\n"
-        printf "\t<title>%s</title>\n" "${title}"
-        printf "\t<guid>%s</guid>\n" "${WEBSITE}/${BLOGDIR}/${blogpost}.html"
-        printf "\t<pubDate>%s</pubDate>\n" "$(date '+%a, %d %b %Y %T %z')" 
-        printf "\t<description>\n"
+        printf "<title>%s</title>\n" "${title}"
+        printf "<guid>%s</guid>\n" "${WEBSITE}/${BLOGDIR}/${blogpost}.html"
+        printf "<pubDate>%s</pubDate>\n" "$(date '+%a, %d %b %Y %T %z')" 
+        printf "<description>\n"
         printf "%s\n" "$(cat "${DRAFTDIR}/${blogpost}.xml")"
-        printf "\t</description>\n"
+        printf "</description>\n"
         printf "</item>\n"
         printf "<!--END %s-->\n" "${blogpost}"
 }
 
-usage() {
+usage()
+{
         printf "usage: ${0##*/} {-n | -p | -e | -v | -t | -r | -c | -o | -d | -l}\n\n" 1>&2
         printf "options:\n" 1>&2
         printf "  -n\tnew post\n" 1>&2
@@ -239,7 +248,6 @@ usage() {
         printf "  -o\tview published post in browser\n" 1>&2
         printf "  -d\tdelete published post\n" 1>&2
         printf "  -l\tlist all published posts\n" 1>&2
-        
         exit 1
 }
 

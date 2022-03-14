@@ -1,5 +1,6 @@
 sbrs
 ====
+
 A small and simple blog and RSS shell script written in POSIX shell.
 
 Preparation
@@ -54,3 +55,5 @@ Notes:
 ------
 Do NOT edit the various comments that the script writes inside the files,
 otherwise it'll not work properly, or work at all.
+
+Report any bugs to <christos@margiolis.net>.
