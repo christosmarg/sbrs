@@ -18,12 +18,12 @@ The options are as follows:
 Prompt the user to write a new article in HTML.
 .Nm
 will open the editor set in the 'EDITOR' environmental variable. In case
-it is not set, it will set Vim as 'EDITOR'.
+it is not set, it will set 'EDITOR' to Vi.
 .It Fl p
 Publish one of the posts stored in the '.drafts' directory. After a post
 has been published, it will be deleted from '.drafts' along with all the
-files related to it and will be moved to 'articles'. This option also automatically
-creates an RSS feed for the post.
+files related to it and will be moved to the article directory. This option also
+automatically creates an RSS feed for the post.
 .It Fl e
 Edit one of the posts stored in the '.drafts' directory.
 .It Fl v
@@ -37,7 +37,7 @@ in order for this option to work.
 .It Fl t
 Delete one of the posts stored in the '.drafts' directory.
 .It Fl r
-Revise a published post stored in the 'articles' directory. After you're done
+Revise a published post stored in the article directory. After you're done
 revising you don't need to re-publish the post again, since
 .Nm
 edits the post directly.
@@ -46,15 +46,14 @@ Change a published post's title. This option will replace every instance
 of the old title with the new one both. The filename will also
 be changed.
 .It Fl o
-View a published post stored in the 'articles' directory on your default browser.
+View a published post stored in the article directory on your default browser.
 Same with the -v option; the 'BROWSER' environmental variable has to be set
 in order for this option to work.
 .It Fl d
-Delete a published post stored in the 'articles' directory. This option will delete
-the post from the articles' index file, the RSS feed, as well as the main page in
-case it is found there too.
+Delete a published post stored in the article directory. This option will delete
+the post from the articles' index file and the RSS feed.
 .It Fl l
-List all posts stored in the 'articles' directory.
+List all posts stored in the article directory.
 .El
 .Pp
 Only one option at a time can be used.
@@ -62,33 +61,33 @@ Only one option at a time can be used.
 .Pp
 Inside the
 .Nm
-script, change the 'WEBSITE' and 'AUTHOR' variables to match your website's URL
-and your name.
+script, the variable at the top of the script to match your own configuration.
 .Pp
 In case you don't edit the script further, the structure of your website's
-directory should look like this. The files below need to exist with the same
-names.
+directory should look like this:
 .Pp
-        ├── articles 
-        |   └── here reside your articles
-        ├── index.html
-        ├── articles.html
+        ├── .drafts/
+        |   └── unpublished articles live here
+        ├── articles/
+        |   └── articles live here
+        ├── article_index.html
         ├── template.html
         └── rss.xml
 .Pp
-Inside 'index.html', 'articles.html' and 'rss.xml'
+Inside 'article_index.html' (or whatever you name it) and 'rss.xml'
 .Nm
-will search for
-<!--SBRS--> in order to put the article listings and RSS feed below it.
+will search for an <!--SBRS--> comment in order to put the article
+listings and RSS feed below it.
 .Pp
-The 'template.html' file is how you want your article's page to look like.
-See my own 'template.html' for more. The 'TITLE', 'HEADER' and 'AUTHOR'
-fields must exist and be left as is.
+The 'template.html' file is an outline of the article page. Take a look
+at the 'template.html' provided. The 'TITLE', 'HEADER' and 'AUTHOR'
+get replaced by
+.Nm .
 .Sh USAGE
 .Pp
-You must always run the script inside your website's main directory.
-Run it with one of the following options. Only one option can be used
-at a time.
+You must always run
+.Nm
+inside the website's main directory. Only one option can be used at a time.
 .Sh NOTES
 Do NOT edit the various comments that the script writes inside the files,
 otherwise it'll not work properly, or work at all.
