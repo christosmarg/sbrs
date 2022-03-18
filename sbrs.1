@@ -8,6 +8,7 @@
 .Nm
 .Bro
 .Cm -n | -p | -e | -v | -t | -r | -c | -o | -d | -l
+.Brc
 .Sh DESCRIPTION
 .Nm
 generates an article post page and RSS feed.
@@ -17,13 +18,13 @@ The options are as follows:
 .It Fl n
 Prompt the user to write a new article in HTML.
 .Nm
-will open the editor set in the 'EDITOR' environmental variable. In case
-it is not set, it will set 'EDITOR' to Vi.
+will open the editor set in the 'EDITOR' environmental variable.
+In case it is not set, it will set 'EDITOR' to Vi.
 .It Fl p
-Publish one of the posts stored in the '.drafts' directory. After a post
-has been published, it will be deleted from '.drafts' along with all the
-files related to it and will be moved to the article directory. This option also
-automatically creates an RSS feed for the post.
+Publish one of the posts stored in the '.drafts' directory.
+After a post has been published, it will be deleted from '.drafts' along \
+with all the files related to it and will be moved to the article directory.
+This option also automatically creates an RSS feed for the post.
 .It Fl e
 Edit one of the posts stored in the '.drafts' directory.
 .It Fl v
@@ -32,33 +33,33 @@ View one of the posts stored in the '.drafts' directory.
 creates a temporary file that looks like the finished post, but is deleted
 after
 .Nm
-has exited. The 'BROWSER' environmental variable has to be set
-in order for this option to work.
+has exited.
+The 'BROWSER' environmental variable has to be set in order for this \
+option to work.
 .It Fl t
 Delete one of the posts stored in the '.drafts' directory.
 .It Fl r
-Revise a published post stored in the article directory. After you're done
-revising you don't need to re-publish the post again, since
+Revise a published post stored in the article directory.
+After you're done revising you don't need to re-publish the post again, since
 .Nm
 edits the post directly.
 .It Fl c
-Change a published post's title. This option will replace every instance
-of the old title with the new one both. The filename will also
-be changed.
+Change a published post's title.
+This option will replace every instance of the old title with the new one both.
+The filename will also be changed.
 .It Fl o
 View a published post stored in the article directory on your default browser.
 Same with the -v option; the 'BROWSER' environmental variable has to be set
 in order for this option to work.
 .It Fl d
-Delete a published post stored in the article directory. This option will delete
-the post from the articles' index file and the RSS feed.
+Delete a published post stored in the article directory.
+This option will delete the post from the articles' index file and the RSS feed.
 .It Fl l
 List all posts stored in the article directory.
 .El
 .Pp
 Only one option at a time can be used.
 .Sh PREPARATION
-.Pp
 Inside the
 .Nm
 script, edit the variables at the top of the file to match your own configuration.
@@ -79,15 +80,15 @@ Inside 'article_index.html' (or whatever you name it) and 'rss.xml'
 will search for an <!--SBRS--> comment in order to put the article
 listings and RSS feed below it.
 .Pp
-The 'template.html' file is an outline of the article page. Take a look
-at the 'template.html' provided. The 'TITLE', 'HEADER' and 'AUTHOR'
-get replaced by
+The 'template.html' file is an outline of the article page.
+Take a look at the 'template.html' provided.
+The 'TITLE', 'HEADER' and 'AUTHOR' get replaced by
 .Nm .
 .Sh USAGE
-.Pp
 You must always run
 .Nm
-inside the website's main directory. Only one option can be used at a time.
+inside the website's main directory.
+Only one option can be used at a time.
 .Sh NOTES
 Do NOT edit the various comments that the script writes inside the files,
 otherwise it'll not work properly, or work at all.
