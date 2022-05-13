@@ -3,11 +3,14 @@
 
 WEBSITE="https://margiolis.net"
 AUTHOR="Christos Margiolis"
-BLOGDIR="articles"
-DRAFTDIR=".drafts"
-INDEX="index.html"
+EMAIL="christos@margiolis.net"
+BLOGDIR="w"
+# TODO: support more indexes
+INDEX="w/index.html"
 RSSFILE="rss.xml"
 TEMPLATE="template.html"
+DRAFTDIR=".drafts"
+FORMAL_DATE="+%B %d, %Y"
 DATEFMT="+%Y.%m.%d"
 test -z "${EDITOR}" && EDITOR="vi"
 
@@ -16,7 +19,6 @@ main()
         test -f "${TEMPLATE}"   || err "${TEMPLATE}: missing file"
         test -f "${INDEX}"      || err "${INDEX}: missing file"
         test -f "${RSSFILE}"    || err "${RSSFILE}: missing file"
-	test ${f_exit} && exit 1
 
         if ! test -d "${BLOGDIR}"; then
                 confirmact "Blog directory doesn't exist. Intialize it here (y/n)? " "y"
@@ -41,8 +43,8 @@ main()
 
 err()
 {
-	f_exit=true
         echo "${0##*/}: $@" 1>&2
+	exit 1
 }
 
 # Could just use `read -erp` but the -e and -p options don't work
@@ -56,12 +58,12 @@ xread()
 # implementations require a backup file with the -i option.
 # In this case, we make the backup files and immidiately delete
 # them afterwards because we probably don't need them.
-# We're using the extension `.sedibak` since we want to delete
+# We're using the extension `.bak` since we want to delete
 # only the files affected by `sedi` and nothing else, and that's
 # an easy way to make sure.
 sedi()
 {
-        sed -i.sedibak "$@" && rm *.sedibak ${BLOGDIR}/*.sedibak 2>/dev/null
+        sed -i.bak "$@" && rm *.bak ${BLOGDIR}/*.bak 2>/dev/null
 }
 
 confirmact()
@@ -132,7 +134,7 @@ newpost()
         titlecheck ${blogpost}
         $EDITOR "${DRAFTDIR}/${blogpost}.html"
 
-        sed "s/TITLE/${title}/g;s/HEADER/${title}/g;s/AUTHOR/${AUTHOR}/g;" "${TEMPLATE}" \
+        sed "s/HEADER/${title}/g;s/AUTHOR/${AUTHOR}/g;s/EMAIL/${EMAIL}/g;s/FORMAL_DATE/${FORMAL_DATE}/g;" "${TEMPLATE}" \
         > "${DRAFTDIR}/${blogpost}.final.html"
 }
 
@@ -225,6 +227,7 @@ rsscreate()
         printf "<!--BEGIN %s-->\n" "${blogpost}"
         printf "<item>\n"
         printf "<title>%s</title>\n" "${title}"
+        printf "<author>%s</author>\n" "${AUTHOR}"
         printf "<guid>%s</guid>\n" "${WEBSITE}/${BLOGDIR}/${blogpost}.html"
         printf "<pubDate>%s</pubDate>\n" "$(date '+%a, %d %b %Y %T %z')" 
         printf "<description>\n"
